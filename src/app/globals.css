@@ -1,26 +1,65 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --foreground-rgb: 0, 0, 0;
+  --background-rgb: 255, 255, 255;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html,
+body {
+  height: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  color: rgb(var(--foreground-rgb));
+  background: rgb(var(--background-rgb));
+}
+
+.clip-wave {
+  clip-path: polygon(100% 0, 0 0, 0 65%, 2% 64.95%, 4% 64.8%, 6% 64.6%, 8% 64.3%, 10% 63.9%, 12% 63.45%, 14% 62.9%, 16% 62.25%, 18% 61.55%, 20% 60.8%, 22% 59.95%, 24% 59.05%, 26% 58.1%, 28% 57.1%, 30% 56.05%, 32% 55%, 34% 53.9%, 36% 52.8%, 38% 51.75%, 40% 50.7%, 42% 49.7%, 44% 48.75%, 46% 47.85%, 48% 47.05%, 50% 46.25%, 52% 45.55%, 54% 44.95%, 56% 44.45%, 58% 44.05%, 60% 43.7%, 62% 43.5%, 64% 43.35%, 66% 43.3%, 68% 43.35%, 70% 43.5%, 72% 43.7%, 74% 44.05%, 76% 44.45%, 78% 44.95%, 80% 45.55%, 82% 46.25%, 84% 47.05%, 86% 47.85%, 88% 48.75%, 90% 49.7%, 92% 50.7%, 94% 51.75%, 96% 52.8%, 98% 53.9%, 100% 55%);
+}
+
+.clip-curve {
+  clip-path: ellipse(100% 100% at 50% 100%);
+}
+
+@keyframes blob {
+  0% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  33% {
+    transform: translate(30px, -50px) scale(1.1);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.9);
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+}
+
+.animate-blob {
+  animation: blob 7s infinite;
+}
+
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+
+.animation-delay-4000 {
+  animation-delay: 4s;
+}
+
+.animation-delay-6000 {
+  animation-delay: 6s;
+}
+
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+.rotate-x-1 {
+  transform: rotateX(1deg);
 }
