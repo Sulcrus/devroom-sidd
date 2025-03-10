@@ -1,10 +1,14 @@
 import { NextRequest } from "next/server";
+import { query } from "@/lib/mysql";
 import jwt from "jsonwebtoken";
-import { query } from "./mysql";
+import { cookies } from "next/headers";
+import { User } from "@/types";
 
-export async function getAuthUser(req: NextRequest) {
+export async function getAuthUser(req: NextRequest | Request): Promise<User | null> {
   try {
-    const token = req.cookies.get("auth_token")?.value;
+    // Get token from cookie
+    const cookieStore = cookies();
+    const token = cookieStore.get('token')?.value;
 
     if (!token) {
       return null;
@@ -16,19 +20,19 @@ export async function getAuthUser(req: NextRequest) {
       process.env.JWT_SECRET || "fallback-secret"
     ) as { userId: string };
 
-    // Get user
-    const users = await query({
+    // Get user from database
+    const [user] = await query({
       query: `
-        SELECT u.*, s.token 
-        FROM users u
-        JOIN sessions s ON s.user_id = u.id
-        WHERE u.id = ? AND s.token = ? AND s.expires_at > NOW()
+        SELECT id, first_name, last_name, email, username, created_at, updated_at
+        FROM users 
+        WHERE id = ?
       `,
-      values: [decoded.userId, token],
-    });
+      values: [decoded.userId],
+    }) as User[];
 
-    return Array.isArray(users) && users[0];
+    return user || null;
   } catch (error) {
+    console.error("Auth error:", error);
     return null;
   }
 } 

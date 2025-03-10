@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { query } from "@/lib/mysql";
 import { getAuthUser } from "@/lib/auth";
 import { v4 as uuidv4 } from "uuid";
@@ -14,7 +14,7 @@ async function createNotification(userId: string, title: string, message: string
   });
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     

@@ -1,4 +1,5 @@
 import mysql from 'mysql2/promise';
+import { RowDataPacket, OkPacket, ResultSetHeader } from "mysql2";
 
 const pool = mysql.createPool({
   host: '95.217.203.22',
@@ -10,18 +11,31 @@ const pool = mysql.createPool({
   queueLimit: 0
 });
 
+export type QueryResult = RowDataPacket[] | OkPacket | ResultSetHeader | ResultSetHeader[];
+
 export async function query({
   query,
   values = []
 }: {
   query: string;
   values?: any[];
-}) {
+}): Promise<QueryResult> {
   try {
-    const [results] = await pool.execute(query, values);
+    const connection = await mysql.createConnection({
+      host: process.env.MYSQL_HOST,
+      port: parseInt(process.env.MYSQL_PORT || "3306"),
+      database: process.env.MYSQL_DATABASE,
+      user: process.env.MYSQL_USER,
+      password: process.env.MYSQL_PASSWORD,
+    });
+
+    const [results] = await connection.execute(query, values);
+    await connection.end();
+
     return results;
-  } catch (error: any) {
-    throw new Error(error.message);
+  } catch (error) {
+    console.error("Database error:", error);
+    throw new Error("Database error");
   }
 }
 
