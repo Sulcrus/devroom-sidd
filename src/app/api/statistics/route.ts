@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
     ] = await Promise.all([
       // Get total balance
       query({
-        query: `
+        sql: `
           SELECT SUM(balance) as total
           FROM accounts
           WHERE user_id = ? AND status = 'active'
@@ -26,9 +26,9 @@ export async function GET(req: NextRequest) {
         values: [user.id],
       }),
 
-      // Get monthly income and spending (with fallback)
+      // Get monthly income and spending
       query({
-        query: `
+        sql: `
           SELECT 
             'income' as type,
             COALESCE(SUM(CASE 
@@ -54,7 +54,7 @@ export async function GET(req: NextRequest) {
 
       // Get spending by category
       query({
-        query: `
+        sql: `
           SELECT 
             tc.name as category,
             tc.color,
@@ -72,7 +72,7 @@ export async function GET(req: NextRequest) {
 
       // Get daily transaction stats
       query({
-        query: `
+        sql: `
           SELECT 
             DATE(t.created_at) as date,
             SUM(CASE WHEN a_to.user_id = ? THEN t.amount ELSE 0 END) as income,

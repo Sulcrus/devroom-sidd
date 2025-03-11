@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
     }
 
     const notifications = await query({
-      query: `
+      sql: `
         SELECT * FROM notifications 
         WHERE user_id = ? 
         ORDER BY created_at DESC 
