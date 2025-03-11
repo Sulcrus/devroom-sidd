@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { query, querySingle } from "@/lib/mysql";
+import { querySingle } from "@/lib/mysql";
 import jwt from "jsonwebtoken";
 import { cookies } from "next/headers";
 import { User } from "@/types";
@@ -25,7 +25,7 @@ export async function getAuthUser(req: NextRequest): Promise<User | null> {
       sql: `
         SELECT id, first_name, last_name, email, username, created_at, updated_at
         FROM users 
-        WHERE id = ?
+        WHERE id = ? AND status = 'active'
       `,
       values: [decoded.userId],
     });

@@ -18,7 +18,7 @@ const nextConfig = {
   },
   // Add this to handle potential memory issues
   webpack: (config) => {
-    config.externals = [...config.externals, 'bcrypt'];
+    config.externals = [...(config.externals || []), 'bcrypt'];
     return config;
   },
 };
