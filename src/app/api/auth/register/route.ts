@@ -1,44 +1,44 @@
 import { NextRequest, NextResponse } from "next/server";
 import { query } from "@/lib/mysql";
-import { v4 as uuidv4 } from "uuid";
 import bcrypt from "bcryptjs";
-import { generateAccountNumber, generateUsername } from "@/lib/utils";
+import { v4 as uuidv4 } from "uuid";
+import { generateAccountNumber } from "@/lib/utils";
 
 export async function POST(req: NextRequest) {
   try {
     const {
-      firstName,
-      lastName,
+      first_name,
+      last_name,
+      username,
       email,
       password,
       phone,
-      dateOfBirth,
+      date_of_birth,
       gender,
-      maritalStatus,
+      marital_status,
       street,
       city,
       state,
-      postalCode,
+      postal_code,
       country,
-      accountType = "savings",
     } = await req.json();
 
-    // Generate username and check availability
-    let username = generateUsername(firstName, lastName);
+    // Check username availability
     let isUsernameTaken = true;
     let attempts = 0;
+    let finalUsername = username;
 
     while (isUsernameTaken && attempts < 5) {
       const existingUsername = await query({
-        query: "SELECT id FROM users WHERE username = ?",
-        values: [username],
+        sql: "SELECT id FROM users WHERE username = ?",
+        values: [finalUsername],
       });
 
-      if (!Array.isArray(existingUsername) || existingUsername.length === 0) {
+      if (!existingUsername.length) {
         isUsernameTaken = false;
       } else {
-        username = generateUsername(firstName, lastName);
         attempts++;
+        finalUsername = `${username}${attempts}`;
       }
     }
 
@@ -51,13 +51,13 @@ export async function POST(req: NextRequest) {
 
     // Check if email exists
     const existingUser = await query({
-      query: "SELECT id FROM users WHERE email = ?",
+      sql: "SELECT id FROM users WHERE email = ?",
       values: [email],
     });
 
-    if (Array.isArray(existingUser) && existingUser.length > 0) {
+    if (existingUser.length > 0) {
       return NextResponse.json(
-        { error: "User already exists" },
+        { error: "Email already registered" },
         { status: 400 }
       );
     }
@@ -69,16 +69,15 @@ export async function POST(req: NextRequest) {
     const userId = uuidv4();
     const addressId = uuidv4();
     const accountId = uuidv4();
-
-    // Start transaction
-    await query({
-      query: "START TRANSACTION",
-    });
+    const accountNumber = generateAccountNumber();
 
     try {
+      // Start transaction
+      await query({ sql: "START TRANSACTION" });
+
       // Insert user
       await query({
-        query: `
+        sql: `
           INSERT INTO users (
             id, first_name, last_name, username, email, password, 
             phone, date_of_birth, gender, marital_status
@@ -86,21 +85,21 @@ export async function POST(req: NextRequest) {
         `,
         values: [
           userId,
-          firstName,
-          lastName,
-          username,
+          first_name,
+          last_name,
+          finalUsername,
           email,
           hashedPassword,
           phone,
-          dateOfBirth,
+          date_of_birth,
           gender,
-          maritalStatus,
+          marital_status,
         ],
       });
 
       // Insert address
       await query({
-        query: `
+        sql: `
           INSERT INTO addresses (
             id, user_id, street, city, state, postal_code, country
           ) VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -111,14 +110,14 @@ export async function POST(req: NextRequest) {
           street,
           city,
           state,
-          postalCode,
+          postal_code,
           country,
         ],
       });
 
       // Insert account
       await query({
-        query: `
+        sql: `
           INSERT INTO accounts (
             id, user_id, account_number, account_type, balance, status, currency
           ) VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -126,34 +125,30 @@ export async function POST(req: NextRequest) {
         values: [
           accountId,
           userId,
-          generateAccountNumber(),
-          accountType,
-          100.00, // Default initial balance
+          accountNumber,
+          'savings',
+          0,
           'active',
           'USD',
         ],
       });
 
       // Commit transaction
-      await query({
-        query: "COMMIT",
-      });
+      await query({ sql: "COMMIT" });
 
       return NextResponse.json({ 
         message: "Registration successful",
-        username,
+        username: finalUsername,
       });
     } catch (error) {
       // Rollback on error
-      await query({
-        query: "ROLLBACK",
-      });
+      await query({ sql: "ROLLBACK" });
       throw error;
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Registration error:", error);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: error.message || "Registration failed" },
       { status: 500 }
     );
   }

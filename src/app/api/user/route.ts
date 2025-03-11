@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
     }
 
     const [userData] = await query({
-      query: `
+      sql: `
         SELECT id, first_name, last_name, email, username, created_at, updated_at
         FROM users
         WHERE id = ?

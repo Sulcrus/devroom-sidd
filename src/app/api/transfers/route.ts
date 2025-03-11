@@ -6,7 +6,7 @@ import { generateReferenceNumber } from "@/lib/utils";
 
 async function createNotification(userId: string, title: string, message: string, type: 'success' | 'warning' | 'error' | 'info') {
   await query({
-    query: `
+    sql: `
       INSERT INTO notifications (id, user_id, title, message, type)
       VALUES (?, ?, ?, ?, ?)
     `,
@@ -33,12 +33,12 @@ export async function POST(req: NextRequest) {
     }
 
     // Start transaction
-    await query({ query: "START TRANSACTION" });
+    await query({ sql: "START TRANSACTION" });
 
     try {
-      // Check if source account exists and belongs to user
+      // Get source account and verify balance
       const [fromAccount] = await query({
-        query: `
+        sql: `
           SELECT id, balance, status, currency
           FROM accounts 
           WHERE id = ? AND user_id = ? AND status = 'active'
@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
 
       // Find recipient's default account by username
       const [recipientAccount] = await query({
-        query: `
+        sql: `
           SELECT a.id, a.status, a.currency, u.username, u.first_name, u.last_name
           FROM accounts a
           JOIN users u ON a.user_id = u.id
@@ -82,18 +82,18 @@ export async function POST(req: NextRequest) {
 
       // Update balances
       await query({
-        query: "UPDATE accounts SET balance = balance - ? WHERE id = ?",
+        sql: "UPDATE accounts SET balance = balance - ? WHERE id = ?",
         values: [amount, fromAccount.id],
       });
 
       await query({
-        query: "UPDATE accounts SET balance = balance + ? WHERE id = ?",
+        sql: "UPDATE accounts SET balance = balance + ? WHERE id = ?",
         values: [amount, recipientAccount.id],
       });
 
       // Record transaction
       await query({
-        query: `
+        sql: `
           INSERT INTO transactions (
             id, from_account_id, to_account_id, amount, 
             type, status, description, reference_number,
@@ -114,7 +114,7 @@ export async function POST(req: NextRequest) {
 
       // Update monthly statistics for sender (spending)
       await query({
-        query: `
+        sql: `
           INSERT INTO monthly_statistics (
             user_id, 
             type, 
@@ -129,7 +129,7 @@ export async function POST(req: NextRequest) {
 
       // Update monthly statistics for recipient (income)
       await query({
-        query: `
+        sql: `
           INSERT INTO monthly_statistics (
             user_id, 
             type, 
@@ -157,7 +157,8 @@ export async function POST(req: NextRequest) {
         'success'
       );
 
-      await query({ query: "COMMIT" });
+      // Commit transaction
+      await query({ sql: "COMMIT" });
 
       return NextResponse.json({
         message: "Transfer successful",
@@ -165,18 +166,15 @@ export async function POST(req: NextRequest) {
         recipientName: `${recipientAccount.first_name} ${recipientAccount.last_name}`,
       });
     } catch (error: any) {
-      await query({ query: "ROLLBACK" });
-      
-      return NextResponse.json(
-        { error: error.message },
-        { status: 400 }
-      );
+      // Rollback on error
+      await query({ sql: "ROLLBACK" });
+      throw error;
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Transfer error:", error);
     return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
+      { error: error.message || "Transfer failed" },
+      { status: 400 }
     );
   }
 } 

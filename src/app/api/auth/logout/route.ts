@@ -7,31 +7,24 @@ export async function POST(req: NextRequest) {
     const user = await getAuthUser(req);
 
     if (!user) {
-      return NextResponse.json(
-        { error: "Not authenticated" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Remove session
     await query({
-      query: "DELETE FROM sessions WHERE user_id = ?",
+      sql: "DELETE FROM sessions WHERE user_id = ?",
       values: [user.id],
     });
 
     // Clear cookie
-    const response = NextResponse.json(
-      { message: "Logged out successfully" },
-      { status: 200 }
-    );
-
-    response.cookies.delete("auth_token");
+    const response = NextResponse.json({ message: "Logged out successfully" });
+    response.cookies.delete('token');
 
     return response;
-  } catch (error: any) {
+  } catch (error) {
     console.error("Logout error:", error);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Logout failed" },
       { status: 500 }
     );
   }
