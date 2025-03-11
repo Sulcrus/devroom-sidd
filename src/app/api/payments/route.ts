@@ -1,8 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { query } from "@/lib/mysql";
+import { query, querySingle } from "@/lib/mysql";
 import { getAuthUser } from "@/lib/auth";
 import { v4 as uuidv4 } from "uuid";
 import { generateReferenceNumber } from "@/lib/utils";
+
+interface AccountRow {
+  id: string;
+  balance: number;
+  currency: string;
+  status: string;
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -34,7 +41,7 @@ export async function POST(req: NextRequest) {
       await query({ query: "START TRANSACTION" });
 
       // Get source account and verify balance
-      const [fromAccount] = await query({
+      const fromAccount = await querySingle<AccountRow>({
         query: `
           SELECT id, balance, currency, status 
           FROM accounts 

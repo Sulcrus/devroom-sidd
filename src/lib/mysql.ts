@@ -1,54 +1,60 @@
 import mysql from 'mysql2/promise';
 import { RowDataPacket, OkPacket, ResultSetHeader } from "mysql2";
 
+// Define more specific types for query results
+export interface QueryResultRow extends RowDataPacket {
+  [key: string]: any;
+}
+
+export type QueryResult<T = QueryResultRow> = T[];
+export type QueryResultSingle<T = QueryResultRow> = T | null;
+
+// Create a connection pool
 const pool = mysql.createPool({
-  host: '95.217.203.22',
-  user: 'khojekoj_sidd',
-  password: 'Aaryu0629',
-  database: 'khojekoj_sidd',
+  host: process.env.MYSQL_HOST,
+  user: process.env.MYSQL_USER,
+  password: process.env.MYSQL_PASSWORD,
+  database: process.env.MYSQL_DATABASE,
+  ssl: {
+    rejectUnauthorized: true
+  },
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0
 });
 
-export type QueryResult = RowDataPacket[] | OkPacket | ResultSetHeader | ResultSetHeader[];
-
-export async function query({
+export async function query<T = QueryResultRow>({
   query,
   values = []
 }: {
   query: string;
   values?: any[];
-}): Promise<QueryResult> {
+}): Promise<QueryResult<T>> {
   try {
-    const connection = await mysql.createConnection({
-      host: process.env.MYSQL_HOST,
-      port: parseInt(process.env.MYSQL_PORT || "3306"),
-      database: process.env.MYSQL_DATABASE,
-      user: process.env.MYSQL_USER,
-      password: process.env.MYSQL_PASSWORD,
-    });
-
-    const [results] = await connection.execute(query, values);
-    await connection.end();
-
-    return results;
+    const [rows] = await pool.execute(query, values);
+    return rows as QueryResult<T>;
   } catch (error) {
     console.error("Database error:", error);
     throw new Error("Database error");
   }
 }
 
+export async function querySingle<T = QueryResultRow>({
+  query,
+  values = []
+}: {
+  query: string;
+  values?: any[];
+}): Promise<QueryResultSingle<T>> {
+  const rows = await query<T>({ query, values });
+  return rows[0] || null;
+}
+
 export async function transaction<T>(
   callback: (connection: mysql.Connection) => Promise<T>
 ): Promise<T> {
-  const connection = await mysql.createConnection({
-    host: process.env.MYSQL_HOST,
-    user: process.env.MYSQL_USER,
-    password: process.env.MYSQL_PASSWORD,
-    database: process.env.MYSQL_DATABASE,
-  });
-
+  const connection = await pool.getConnection();
+  
   try {
     await connection.beginTransaction();
     const result = await callback(connection);
@@ -58,6 +64,6 @@ export async function transaction<T>(
     await connection.rollback();
     throw error;
   } finally {
-    connection.end();
+    connection.release();
   }
 } 

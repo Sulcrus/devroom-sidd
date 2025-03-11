@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { query } from "@/lib/mysql";
+import { query, querySingle } from "@/lib/mysql";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { v4 as uuidv4 } from "uuid";
 import { RowDataPacket } from "mysql2";
 
-interface UserRow extends RowDataPacket {
+interface UserRow {
   id: string;
   username: string;
   password: string;
@@ -27,14 +27,10 @@ export async function POST(req: NextRequest) {
     }
 
     // Get user
-    const [user] = await query({
-      query: `
-        SELECT id, username, password, first_name, last_name, email
-        FROM users
-        WHERE username = ?
-      `,
+    const user = await querySingle<UserRow>({
+      query: `SELECT id, username, password, first_name, last_name, email FROM users WHERE username = ?`,
       values: [username],
-    }) as UserRow[];
+    });
 
     if (!user) {
       return NextResponse.json(
