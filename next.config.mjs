@@ -10,6 +10,11 @@ const nextConfig = {
   },
   reactStrictMode: true,
   swcMinify: true,
+  logging: {
+    fetches: {
+      fullUrl: true,
+    },
+  },
   env: {
     MYSQL_HOST: process.env.MYSQL_HOST,
     MYSQL_USER: process.env.MYSQL_USER,
