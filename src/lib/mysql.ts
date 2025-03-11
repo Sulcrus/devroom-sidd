@@ -24,14 +24,14 @@ const pool = mysql.createPool({
 });
 
 export async function query<T = QueryResultRow>({
-  query,
+  sql,
   values = []
 }: {
-  query: string;
+  sql: string;
   values?: any[];
 }): Promise<QueryResult<T>> {
   try {
-    const [rows] = await pool.execute(query, values);
+    const [rows] = await pool.execute(sql, values);
     return rows as QueryResult<T>;
   } catch (error) {
     console.error("Database error:", error);
@@ -40,13 +40,13 @@ export async function query<T = QueryResultRow>({
 }
 
 export async function querySingle<T = QueryResultRow>({
-  query,
+  sql,
   values = []
 }: {
-  query: string;
+  sql: string;
   values?: any[];
 }): Promise<QueryResultSingle<T>> {
-  const rows = await query<T>({ query, values });
+  const rows = await query<T>({ sql, values });
   return rows[0] || null;
 }
 

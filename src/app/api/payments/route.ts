@@ -38,11 +38,11 @@ export async function POST(req: NextRequest) {
 
     try {
       // Start transaction
-      await query({ query: "START TRANSACTION" });
+      await query({ sql: "START TRANSACTION" });
 
       // Get source account and verify balance
       const fromAccount = await querySingle<AccountRow>({
-        query: `
+        sql: `
           SELECT id, balance, currency, status 
           FROM accounts 
           WHERE id = ? AND user_id = ? AND status = 'active'

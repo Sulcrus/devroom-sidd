@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
 
     // Get user
     const user = await querySingle<UserRow>({
-      query: `SELECT id, username, password, first_name, last_name, email FROM users WHERE username = ?`,
+      sql: `SELECT id, username, password, first_name, last_name, email FROM users WHERE username = ?`,
       values: [username],
     });
 
