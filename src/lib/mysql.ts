@@ -15,9 +15,9 @@ const pool = mysql.createPool({
   user: process.env.MYSQL_USER,
   password: process.env.MYSQL_PASSWORD,
   database: process.env.MYSQL_DATABASE,
-  ssl: {
+  ssl: process.env.NODE_ENV === 'production' ? {
     rejectUnauthorized: true
-  },
+  } : undefined,
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0
@@ -65,5 +65,17 @@ export async function transaction<T>(
     throw error;
   } finally {
     connection.release();
+  }
+}
+
+// Add this function to check database connection
+export async function checkDatabaseConnection() {
+  try {
+    const connection = await pool.getConnection();
+    connection.release();
+    return true;
+  } catch (error) {
+    console.error('Database connection failed:', error);
+    return false;
   }
 } 

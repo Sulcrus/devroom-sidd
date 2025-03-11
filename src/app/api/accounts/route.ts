@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
     }
 
     const accounts = await query({
-      query: `
+      sql: `
         SELECT * FROM accounts 
         WHERE user_id = ? 
         ORDER BY created_at DESC

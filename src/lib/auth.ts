@@ -1,12 +1,12 @@
 import { NextRequest } from "next/server";
-import { query } from "@/lib/mysql";
+import { query, querySingle } from "@/lib/mysql";
 import jwt from "jsonwebtoken";
 import { cookies } from "next/headers";
 import { User } from "@/types";
 
-export async function getAuthUser(req: NextRequest | Request): Promise<User | null> {
+export async function getAuthUser(req: NextRequest): Promise<User | null> {
   try {
-    // Get token from cookie
+    // Get token from cookie using headers() instead of req.cookies
     const cookieStore = cookies();
     const token = cookieStore.get('token')?.value;
 
@@ -21,16 +21,16 @@ export async function getAuthUser(req: NextRequest | Request): Promise<User | nu
     ) as { userId: string };
 
     // Get user from database
-    const [user] = await query({
-      query: `
+    const user = await querySingle<User>({
+      sql: `
         SELECT id, first_name, last_name, email, username, created_at, updated_at
         FROM users 
         WHERE id = ?
       `,
       values: [decoded.userId],
-    }) as User[];
+    });
 
-    return user || null;
+    return user;
   } catch (error) {
     console.error("Auth error:", error);
     return null;

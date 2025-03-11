@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
 
     // Save session
     await query({
-      query: `
+      sql: `
         INSERT INTO sessions (id, user_id, token, expires_at)
         VALUES (?, ?, ?, ?)
       `,

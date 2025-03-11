@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
 
       // Create transaction record
       await query({
-        query: `
+        sql: `
           INSERT INTO transactions (
             id,
             reference_number,
@@ -90,7 +90,7 @@ export async function POST(req: NextRequest) {
 
       // Update account balance
       await query({
-        query: `
+        sql: `
           UPDATE accounts 
           SET balance = balance - ?,
               updated_at = CURRENT_TIMESTAMP
@@ -101,7 +101,7 @@ export async function POST(req: NextRequest) {
 
       // Update monthly statistics
       await query({
-        query: `
+        sql: `
           INSERT INTO monthly_statistics (
             user_id, 
             type, 
@@ -116,7 +116,7 @@ export async function POST(req: NextRequest) {
 
       // Create notification
       await query({
-        query: `
+        sql: `
           INSERT INTO notifications (
             id,
             user_id,
@@ -134,7 +134,7 @@ export async function POST(req: NextRequest) {
       });
 
       // Commit transaction
-      await query({ query: "COMMIT" });
+      await query({ sql: "COMMIT" });
 
       return NextResponse.json({
         message: "Payment successful",
@@ -142,7 +142,7 @@ export async function POST(req: NextRequest) {
       });
     } catch (error: any) {
       // Rollback on error
-      await query({ query: "ROLLBACK" });
+      await query({ sql: "ROLLBACK" });
       throw error;
     }
   } catch (error: any) {
