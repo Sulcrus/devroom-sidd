@@ -50,6 +50,41 @@ export default function DashboardPage() {
     fetchDashboardData();
   }, []);
 
+  // Update statistics whenever accounts or transactions change
+  useEffect(() => {
+    // Calculate statistics from the fetched data
+    const totalBalance = accounts.reduce((sum, acc) => sum + acc.balance, 0);
+    const monthlyIncome = transactions
+      .filter(t => t.type === 'deposit' || t.type === 'transfer')
+      .reduce((sum, t) => sum + t.amount, 0);
+    const monthlySpending = transactions
+      .filter(t => t.type === 'withdrawal')
+      .reduce((sum, t) => sum + t.amount, 0);
+
+    // Generate spending data for the chart
+    const spendingData = transactions
+      .filter(t => t.type === 'withdrawal')
+      .reduce((acc, t) => {
+        const date = format(new Date(t.created_at), 'MMM dd');
+        const existing = acc.find(d => d.date === date);
+        if (existing) {
+          existing.amount += t.amount;
+        } else {
+          acc.push({ date, amount: t.amount });
+        }
+        return acc;
+      }, [] as { date: string; amount: number }[])
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    // Update statistics
+    setStatistics({
+      totalBalance,
+      monthlyIncome,
+      monthlySpending,
+      spendingData
+    });
+  }, [accounts, transactions]);
+
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
@@ -71,38 +106,6 @@ export default function DashboardPage() {
       setLoading(false);
     }
   };
-
-  // Calculate statistics from the fetched data
-  const totalBalance = accounts.reduce((sum, acc) => sum + acc.balance, 0);
-  const monthlyIncome = transactions
-    .filter(t => t.type === 'deposit' || t.type === 'transfer')
-    .reduce((sum, t) => sum + t.amount, 0);
-  const monthlySpending = transactions
-    .filter(t => t.type === 'withdrawal')
-    .reduce((sum, t) => sum + t.amount, 0);
-
-  // Generate spending data for the chart
-  const spendingData = transactions
-    .filter(t => t.type === 'withdrawal')
-    .reduce((acc, t) => {
-      const date = format(new Date(t.created_at), 'MMM dd');
-      const existing = acc.find(d => d.date === date);
-      if (existing) {
-        existing.amount += t.amount;
-      } else {
-        acc.push({ date, amount: t.amount });
-      }
-      return acc;
-    }, [] as { date: string; amount: number }[])
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-  // Update statistics
-  setStatistics({
-    totalBalance,
-    monthlyIncome,
-    monthlySpending,
-    spendingData
-  });
 
   if (loading) {
     return (
