@@ -1,13 +1,16 @@
 import mysql from 'mysql2/promise';
 
+// Create a connection pool instead of single connections
 const pool = mysql.createPool({
-  host: '95.217.203.22',
-  user: 'khojekoj_sidd',
-  password: 'Aaryu0629',
-  database: 'khojekoj_sidd',
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
   waitForConnections: true,
   connectionLimit: 10,
-  queueLimit: 0
+  queueLimit: 0,
+  enableKeepAlive: true,
+  keepAliveInitialDelay: 0
 });
 
 export async function query({
@@ -20,30 +23,21 @@ export async function query({
   try {
     const [results] = await pool.execute(query, values);
     return results;
-  } catch (error: any) {
-    throw new Error(error.message);
+  } catch (error) {
+    console.error('Database query error:', error);
+    throw error;
   }
 }
 
-export async function transaction<T>(
-  callback: (connection: mysql.Connection) => Promise<T>
-): Promise<T> {
-  const connection = await mysql.createConnection({
-    host: process.env.MYSQL_HOST,
-    user: process.env.MYSQL_USER,
-    password: process.env.MYSQL_PASSWORD,
-    database: process.env.MYSQL_DATABASE,
-  });
-
+// Handle cleanup on app shutdown
+process.on('SIGTERM', async () => {
   try {
-    await connection.beginTransaction();
-    const result = await callback(connection);
-    await connection.commit();
-    return result;
-  } catch (error) {
-    await connection.rollback();
-    throw error;
-  } finally {
-    connection.end();
+    await pool.end();
+    console.log('MySQL pool has ended');
+  } catch (err) {
+    console.error('Error closing MySQL pool:', err);
   }
+});
+
+export default pool; 
 } 

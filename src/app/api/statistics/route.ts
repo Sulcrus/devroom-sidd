@@ -3,16 +3,6 @@ import { query } from "@/lib/mysql";
 import { getAuthUser } from "@/lib/auth";
 import { RowDataPacket } from "mysql2";
 
-interface AccountRow extends RowDataPacket {
-  total_balance: number;
-}
-
-interface TransactionRow extends RowDataPacket {
-  date: string;
-  income: number;
-  spending: number;
-}
-
 export async function GET(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
@@ -24,89 +14,82 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Get total balance
-    const [balanceResult] = await query({
+    // Combine all statistics in a single query for better performance
+    const [results] = await query({
       query: `
-        SELECT SUM(balance) as total_balance 
-        FROM accounts 
-        WHERE user_id = ? AND status = 'active'
-      `,
-      values: [user.id],
-    }) as AccountRow[];
-
-    // Get monthly income and spending
-    const [monthlyStats] = await query({
-      query: `
+        WITH user_accounts AS (
+          SELECT id 
+          FROM accounts 
+          WHERE user_id = ? AND status = 'active'
+        ),
+        monthly_stats AS (
+          SELECT 
+            SUM(CASE WHEN t.to_account_id IN (SELECT id FROM user_accounts) THEN t.amount ELSE 0 END) as income,
+            SUM(CASE WHEN t.from_account_id IN (SELECT id FROM user_accounts) THEN t.amount ELSE 0 END) as spending
+          FROM transactions t
+          WHERE t.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+        ),
+        daily_stats AS (
+          SELECT 
+            DATE(t.created_at) as date,
+            SUM(CASE WHEN t.to_account_id IN (SELECT id FROM user_accounts) THEN t.amount ELSE 0 END) as income,
+            SUM(CASE WHEN t.from_account_id IN (SELECT id FROM user_accounts) THEN t.amount ELSE 0 END) as spending
+          FROM transactions t
+          WHERE t.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+          GROUP BY DATE(t.created_at)
+        ),
+        type_stats AS (
+          SELECT 
+            t.type,
+            SUM(t.amount) as amount
+          FROM transactions t
+          WHERE t.from_account_id IN (SELECT id FROM user_accounts)
+          AND t.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+          GROUP BY t.type
+        ),
+        balance AS (
+          SELECT SUM(balance) as total_balance
+          FROM accounts
+          WHERE user_id = ? AND status = 'active'
+        )
         SELECT 
-          COALESCE(SUM(CASE 
-            WHEN ta.user_id = ? THEN t.amount 
-            ELSE 0 
-          END), 0) as monthly_income,
-          COALESCE(SUM(CASE 
-            WHEN fa.user_id = ? THEN t.amount 
-            ELSE 0 
-          END), 0) as monthly_spending
-        FROM transactions t
-        LEFT JOIN accounts fa ON t.from_account_id = fa.id
-        LEFT JOIN accounts ta ON t.to_account_id = ta.id
-        WHERE (fa.user_id = ? OR ta.user_id = ?)
-        AND t.created_at >= DATE_SUB(NOW(), INTERVAL 1 MONTH)
+          (SELECT total_balance FROM balance) as total_balance,
+          (SELECT income FROM monthly_stats) as monthly_income,
+          (SELECT spending FROM monthly_stats) as monthly_spending,
+          (SELECT JSON_ARRAYAGG(
+            JSON_OBJECT(
+              'date', date,
+              'income', income,
+              'spending', spending
+            )
+          ) FROM daily_stats) as transaction_stats,
+          (SELECT JSON_ARRAYAGG(
+            JSON_OBJECT(
+              'type', type,
+              'amount', amount
+            )
+          ) FROM type_stats) as spending_by_type
       `,
-      values: [user.id, user.id, user.id, user.id],
+      values: [user.id, user.id]
     }) as RowDataPacket[];
 
-    // Get daily transaction stats
-    const transactionStats = await query({
-      query: `
-        SELECT 
-          DATE(t.created_at) as date,
-          COALESCE(SUM(CASE 
-            WHEN ta.user_id = ? THEN t.amount 
-            ELSE 0 
-          END), 0) as income,
-          COALESCE(SUM(CASE 
-            WHEN fa.user_id = ? THEN t.amount 
-            ELSE 0 
-          END), 0) as spending
-        FROM transactions t
-        LEFT JOIN accounts fa ON t.from_account_id = fa.id
-        LEFT JOIN accounts ta ON t.to_account_id = ta.id
-        WHERE (fa.user_id = ? OR ta.user_id = ?)
-        AND t.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-        GROUP BY DATE(t.created_at)
-        ORDER BY date DESC
-      `,
-      values: [user.id, user.id, user.id, user.id],
-    }) as TransactionRow[];
+    const stats = results[0];
+    const transactionStats = JSON.parse(stats.transaction_stats || '[]');
+    const spendingByType = JSON.parse(stats.spending_by_type || '[]');
 
-    // Get spending by type
-    const spendingByType = await query({
-      query: `
-        SELECT 
-          t.type,
-          COALESCE(SUM(t.amount), 0) as amount
-        FROM transactions t
-        JOIN accounts a ON t.from_account_id = a.id
-        WHERE a.user_id = ?
-        AND t.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-        GROUP BY t.type
-      `,
-      values: [user.id],
-    }) as RowDataPacket[];
-
-    // Calculate total spending for percentages
+    // Calculate percentages
     const totalSpending = spendingByType.reduce((sum: number, item: any) => sum + item.amount, 0);
+    const spendingWithPercentages = spendingByType.map((item: any) => ({
+      ...item,
+      percentage: totalSpending ? (item.amount / totalSpending * 100) : 0
+    }));
 
     return NextResponse.json({
-      totalBalance: balanceResult.total_balance || 0,
-      monthlyIncome: monthlyStats.monthly_income || 0,
-      monthlySpending: monthlyStats.monthly_spending || 0,
+      totalBalance: stats.total_balance || 0,
+      monthlyIncome: stats.monthly_income || 0,
+      monthlySpending: stats.monthly_spending || 0,
       transactionStats,
-      spendingByType: spendingByType.map((item: any) => ({
-        type: item.type,
-        amount: item.amount,
-        percentage: totalSpending ? (item.amount / totalSpending * 100) : 0
-      }))
+      spendingByType: spendingWithPercentages
     });
 
   } catch (error) {
