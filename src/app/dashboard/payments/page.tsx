@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Card, Title, Text, TextInput, Button, Badge, Metric, Tab, TabList } from "@tremor/react";
+import { Card, Title, Text, TextInput, Button, Badge, Metric } from "@tremor/react";
 import { motion } from "framer-motion";
 import {
   CreditCardIcon,
@@ -54,15 +54,22 @@ export default function PaymentsPage() {
 
         {/* Tabs */}
         <motion.div variants={item}>
-          <TabList 
-            defaultValue="bills"
-            onValueChange={setActiveTab}
-            className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-lg"
-          >
-            <Tab value="bills" text="Bills & Utilities" />
-            <Tab value="scheduled" text="Scheduled" />
-            <Tab value="history" text="History" />
-          </TabList>
+          <div className="flex bg-white/50 dark:bg-gray-800/50 backdrop-blur-lg rounded-lg">
+            {['bills', 'scheduled', 'history'].map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                  activeTab === tab 
+                    ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400' 
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50'
+                }`}
+              >
+                {tab === 'bills' ? 'Bills & Utilities' : 
+                 tab === 'scheduled' ? 'Scheduled' : 'History'}
+              </button>
+            ))}
+          </div>
         </motion.div>
 
         {/* Quick Actions */}
@@ -118,9 +125,9 @@ export default function PaymentsPage() {
               </div>
               <Button 
                 size="sm"
-                color="white"
+                color="amber"
                 variant="secondary"
-                className="bg-white/10 hover:bg-white/20"
+                className="bg-white/10 hover:bg-white/20 text-white"
               >
                 Pay Now
               </Button>

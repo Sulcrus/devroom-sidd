@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Card, Title, Text, AreaChart, DonutChart, BarChart, Metric, Badge, Tab, TabList } from "@tremor/react";
+import { Card, Title, Text, AreaChart, DonutChart, BarChart, Metric, Badge } from "@tremor/react";
 import { motion } from "framer-motion";
 import useUserStore from "@/store/useUserStore";
 import { toast } from "sonner";
@@ -63,15 +63,21 @@ export default function AnalyticsPage() {
             <Title>Financial Analytics</Title>
             <Text>Detailed analysis of your financial activities</Text>
           </div>
-          <TabList
-            defaultValue="month"
-            onValueChange={(value) => setSelectedPeriod(value as any)}
-            className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-lg"
-          >
-            <Tab value="week" text="Week" />
-            <Tab value="month" text="Month" />
-            <Tab value="year" text="Year" />
-          </TabList>
+          <div className="flex bg-white/50 dark:bg-gray-800/50 backdrop-blur-lg rounded-lg">
+            {['week', 'month', 'year'].map((period) => (
+              <button
+                key={period}
+                onClick={() => setSelectedPeriod(period as any)}
+                className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                  selectedPeriod === period 
+                    ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400' 
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50'
+                }`}
+              >
+                {period.charAt(0).toUpperCase() + period.slice(1)}
+              </button>
+            ))}
+          </div>
         </motion.div>
 
         {/* Summary Cards */}

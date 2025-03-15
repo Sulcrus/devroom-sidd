@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Card, Title, Text, TextInput, Button, Toggle } from "@tremor/react";
+import { Card, Title, Text, TextInput, Button } from "@tremor/react";
 import { motion } from "framer-motion";
 import useUserStore from "@/store/useUserStore";
 import { useTheme } from "next-themes";
@@ -14,6 +14,7 @@ import {
   EnvelopeIcon,
   PhoneIcon,
 } from "@heroicons/react/24/outline";
+import { Switch } from "@headlessui/react";
 
 const container = {
   hidden: { opacity: 0 },
@@ -114,10 +115,19 @@ export default function SettingsPage() {
                   <Text>Email Notifications</Text>
                   <Text className="text-gray-500">Get updates via email</Text>
                 </div>
-                <Toggle 
+                <Switch
                   checked={notifications.email}
-                  onValueChange={(val) => setNotifications(prev => ({ ...prev, email: val }))}
-                />
+                  onChange={(val) => setNotifications(prev => ({ ...prev, email: val }))}
+                  className={`${
+                    notifications.email ? 'bg-amber-600' : 'bg-gray-300 dark:bg-gray-700'
+                  } relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none`}
+                >
+                  <span
+                    className={`${
+                      notifications.email ? 'translate-x-6' : 'translate-x-1'
+                    } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
+                  />
+                </Switch>
               </div>
 
               <div className="flex items-center justify-between">
@@ -125,10 +135,19 @@ export default function SettingsPage() {
                   <Text>Push Notifications</Text>
                   <Text className="text-gray-500">Get updates on your device</Text>
                 </div>
-                <Toggle 
+                <Switch
                   checked={notifications.push}
-                  onValueChange={(val) => setNotifications(prev => ({ ...prev, push: val }))}
-                />
+                  onChange={(val) => setNotifications(prev => ({ ...prev, push: val }))}
+                  className={`${
+                    notifications.push ? 'bg-amber-600' : 'bg-gray-300 dark:bg-gray-700'
+                  } relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none`}
+                >
+                  <span
+                    className={`${
+                      notifications.push ? 'translate-x-6' : 'translate-x-1'
+                    } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
+                  />
+                </Switch>
               </div>
 
               <div className="flex items-center justify-between">
@@ -136,10 +155,19 @@ export default function SettingsPage() {
                   <Text>Marketing Emails</Text>
                   <Text className="text-gray-500">Receive promotional content</Text>
                 </div>
-                <Toggle 
+                <Switch
                   checked={notifications.marketing}
-                  onValueChange={(val) => setNotifications(prev => ({ ...prev, marketing: val }))}
-                />
+                  onChange={(val) => setNotifications(prev => ({ ...prev, marketing: val }))}
+                  className={`${
+                    notifications.marketing ? 'bg-amber-600' : 'bg-gray-300 dark:bg-gray-700'
+                  } relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none`}
+                >
+                  <span
+                    className={`${
+                      notifications.marketing ? 'translate-x-6' : 'translate-x-1'
+                    } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
+                  />
+                </Switch>
               </div>
             </div>
           </Card>
