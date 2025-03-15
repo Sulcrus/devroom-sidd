@@ -39,5 +39,4 @@ process.on('SIGTERM', async () => {
   }
 });
 
-export default pool; 
-} 
+export default pool;
