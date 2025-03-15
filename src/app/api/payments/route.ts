@@ -1,143 +1,108 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { query } from "@/lib/mysql";
 import { getAuthUser } from "@/lib/auth";
 import { v4 as uuidv4 } from "uuid";
 import { generateReferenceNumber } from "@/lib/utils";
+import { RowDataPacket } from "mysql2";
 
-export async function POST(req: Request) {
+interface PaymentRow extends RowDataPacket {
+  id: string;
+  user_id: string;
+  amount: number;
+  reference_number: string;
+  status: 'pending' | 'completed' | 'failed';
+  created_at: Date;
+}
+
+interface AccountRow extends RowDataPacket {
+  id: string;
+  balance: number;
+}
+
+async function createNotification(userId: string, title: string, message: string, type: 'success' | 'warning' | 'error' | 'info') {
+  await query({
+    query: `
+      INSERT INTO notifications (id, user_id, title, message, type)
+      VALUES (?, ?, ?, ?, ?)
+    `,
+    values: [uuidv4(), userId, title, message, type],
+  });
+}
+
+export async function POST(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     
     if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
     }
 
-    const { fromAccountId, billerId, amount, category, description } = await req.json();
+    const { amount, accountId, paymentType } = await req.json();
 
     // Validate input
-    if (!fromAccountId || !billerId || !amount || !category) {
+    if (!amount || !accountId || !paymentType) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
       );
     }
 
-    if (amount <= 0) {
+    // Get account
+    const accounts = await query({
+      query: "SELECT * FROM accounts WHERE id = ? AND user_id = ?",
+      values: [accountId, user.id],
+    }) as AccountRow[];
+
+    const account = accounts[0];
+
+    if (!account) {
       return NextResponse.json(
-        { error: "Invalid amount" },
+        { error: "Account not found" },
+        { status: 404 }
+      );
+    }
+
+    // Check balance
+    if (account.balance < amount) {
+      return NextResponse.json(
+        { error: "Insufficient funds" },
         { status: 400 }
       );
     }
 
-    try {
-      // Start transaction
-      await query({ query: "START TRANSACTION" });
+    // Create payment
+    const paymentId = uuidv4();
+    const referenceNumber = generateReferenceNumber();
 
-      // Get source account and verify balance
-      const [fromAccount] = await query({
-        query: `
-          SELECT id, balance, currency, status 
-          FROM accounts 
-          WHERE id = ? AND user_id = ? AND status = 'active'
-          FOR UPDATE
-        `,
-        values: [fromAccountId, user.id],
-      });
+    await query({
+      query: `
+        INSERT INTO payments (id, user_id, account_id, amount, type, reference_number)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `,
+      values: [paymentId, user.id, accountId, amount, paymentType, referenceNumber],
+    });
 
-      if (!fromAccount) {
-        throw new Error("Source account not found or inactive");
-      }
+    // Update account balance
+    await query({
+      query: "UPDATE accounts SET balance = balance - ? WHERE id = ?",
+      values: [amount, accountId],
+    });
 
-      if (fromAccount.balance < amount) {
-        throw new Error("Insufficient funds");
-      }
+    // Create notification
+    await createNotification(
+      user.id,
+      "Payment Successful",
+      `Your payment of ${amount} has been processed successfully. Reference: ${referenceNumber}`,
+      "success"
+    );
 
-      // Generate reference number
-      const referenceNumber = generateReferenceNumber();
-      const transactionId = uuidv4();
-
-      // Create transaction record
-      await query({
-        query: `
-          INSERT INTO transactions (
-            id,
-            reference_number,
-            from_account_id,
-            amount,
-            type,
-            category,
-            description,
-            status
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, 'completed')
-        `,
-        values: [
-          transactionId,
-          referenceNumber,
-          fromAccountId,
-          amount,
-          'payment',
-          category,
-          description || `Payment to ${billerId}`,
-        ],
-      });
-
-      // Update account balance
-      await query({
-        query: `
-          UPDATE accounts 
-          SET balance = balance - ?,
-              updated_at = CURRENT_TIMESTAMP
-          WHERE id = ?
-        `,
-        values: [amount, fromAccountId],
-      });
-
-      // Update monthly statistics
-      await query({
-        query: `
-          INSERT INTO monthly_statistics (
-            user_id, 
-            type, 
-            amount, 
-            month, 
-            year
-          ) VALUES (?, 'spending', ?, MONTH(CURRENT_DATE()), YEAR(CURRENT_DATE()))
-          ON DUPLICATE KEY UPDATE amount = amount + ?
-        `,
-        values: [user.id, amount, amount],
-      });
-
-      // Create notification
-      await query({
-        query: `
-          INSERT INTO notifications (
-            id,
-            user_id,
-            title,
-            message,
-            type
-          ) VALUES (?, ?, ?, ?, 'success')
-        `,
-        values: [
-          uuidv4(),
-          user.id,
-          'Payment Successful',
-          `Payment of ${fromAccount.currency} ${amount.toLocaleString()} to ${billerId}`,
-        ],
-      });
-
-      // Commit transaction
-      await query({ query: "COMMIT" });
-
-      return NextResponse.json({
-        message: "Payment successful",
-        referenceNumber,
-      });
-    } catch (error: any) {
-      // Rollback on error
-      await query({ query: "ROLLBACK" });
-      throw error;
-    }
+    return NextResponse.json({
+      message: "Payment successful",
+      referenceNumber
+    });
   } catch (error: any) {
     console.error("Payment error:", error);
     return NextResponse.json(
