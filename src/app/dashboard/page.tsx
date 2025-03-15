@@ -47,62 +47,22 @@ export default function DashboardPage() {
   const [hideBalances, setHideBalances] = useState(false);
 
   useEffect(() => {
-    if (user?.id) {
-      fetchDashboardData();
-    }
-  }, [user]);
+    fetchDashboardData();
+  }, []);
 
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
       
       // Fetch accounts
-      const accountsRes = await fetch(`/api/accounts?userId=${user?.id}`);
-      if (!accountsRes.ok) throw new Error('Failed to fetch accounts');
+      const accountsRes = await fetch('/api/accounts');
       const accountsData = await accountsRes.json();
       setAccounts(accountsData);
 
-      // Calculate total balance
-      const totalBalance = accountsData.reduce((sum: number, acc: Account) => sum + acc.balance, 0);
-
       // Fetch recent transactions
-      const transactionsRes = await fetch(`/api/transactions?userId=${user?.id}&limit=5`);
-      if (!transactionsRes.ok) throw new Error('Failed to fetch transactions');
+      const transactionsRes = await fetch('/api/transactions?limit=5');
       const transactionsData = await transactionsRes.json();
       setTransactions(transactionsData);
-
-      // Calculate monthly statistics
-      const monthlyIncome = transactionsData
-        .filter((t: Transaction) => t.type === 'deposit' || (t.type === 'transfer' && t.to_account_id))
-        .reduce((sum: number, t: Transaction) => sum + t.amount, 0);
-
-      const monthlySpending = transactionsData
-        .filter((t: Transaction) => t.type === 'withdrawal' || (t.type === 'transfer' && t.from_account_id))
-        .reduce((sum: number, t: Transaction) => sum + t.amount, 0);
-
-      // Generate spending data for the chart
-      const today = new Date();
-      const spendingData = Array.from({ length: 30 }, (_, i) => {
-        const date = new Date(today);
-        date.setDate(date.getDate() - (29 - i));
-        return {
-          date: format(date, 'MMM dd'),
-          amount: transactionsData
-            .filter((t: Transaction) => 
-              new Date(t.created_at).toDateString() === date.toDateString() &&
-              (t.type === 'withdrawal' || (t.type === 'transfer' && t.from_account_id))
-            )
-            .reduce((sum: number, t: Transaction) => sum + t.amount, 0)
-        };
-      });
-
-      // Update statistics
-      setStatistics({
-        totalBalance,
-        monthlyIncome,
-        monthlySpending,
-        spendingData
-      });
 
     } catch (error) {
       console.error('Dashboard data fetch error:', error);
@@ -111,6 +71,38 @@ export default function DashboardPage() {
       setLoading(false);
     }
   };
+
+  // Calculate statistics from the fetched data
+  const totalBalance = accounts.reduce((sum, acc) => sum + acc.balance, 0);
+  const monthlyIncome = transactions
+    .filter(t => t.type === 'deposit' || t.type === 'transfer')
+    .reduce((sum, t) => sum + t.amount, 0);
+  const monthlySpending = transactions
+    .filter(t => t.type === 'withdrawal')
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  // Generate spending data for the chart
+  const spendingData = transactions
+    .filter(t => t.type === 'withdrawal')
+    .reduce((acc, t) => {
+      const date = format(new Date(t.created_at), 'MMM dd');
+      const existing = acc.find(d => d.date === date);
+      if (existing) {
+        existing.amount += t.amount;
+      } else {
+        acc.push({ date, amount: t.amount });
+      }
+      return acc;
+    }, [] as { date: string; amount: number }[])
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+  // Update statistics
+  setStatistics({
+    totalBalance,
+    monthlyIncome,
+    monthlySpending,
+    spendingData
+  });
 
   if (loading) {
     return (
