@@ -1,8 +1,19 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { query } from "@/lib/mysql";
 import { getAuthUser } from "@/lib/auth";
+import { RowDataPacket } from "mysql2";
 
-export async function GET(req: Request) {
+interface NotificationRow extends RowDataPacket {
+  id: string;
+  user_id: string;
+  title: string;
+  message: string;
+  type: 'success' | 'warning' | 'error' | 'info';
+  read: boolean;
+  created_at: Date;
+}
+
+export async function GET(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     
@@ -14,11 +25,11 @@ export async function GET(req: Request) {
       query: `
         SELECT * FROM notifications 
         WHERE user_id = ? 
-        ORDER BY created_at DESC 
-        LIMIT 10
+        ORDER BY created_at DESC
+        LIMIT 50
       `,
       values: [user.id],
-    });
+    }) as NotificationRow[];
 
     return NextResponse.json(notifications);
   } catch (error) {
