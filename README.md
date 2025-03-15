@@ -1,36 +1,137 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Siddhartha Bank - Modern Banking Platform
 
-## Getting Started
+<div align="center">
+  <img src="public/banking-hero.svg" alt="Siddhartha Bank Logo" width="200"/>
+  <h3>A Next.js Banking Platform Demo</h3>
+  <p>Built with Next.js 14, TypeScript, Tailwind CSS, and MySQL</p>
+</div>
 
-First, run the development server:
+## 🌟 Features
 
-```bash
+- **Secure Authentication**
+  - JWT-based authentication
+  - Session management
+  - Password encryption
+
+- **Account Management**
+  - Multiple account types (Savings, Current)
+  - Real-time balance tracking
+  - Transaction history
+
+- **Money Transfers**
+  - Instant transfers between accounts
+  - Scheduled payments
+  - Transaction categorization
+
+- **Dashboard Analytics**
+  - Spending patterns
+  - Income tracking
+  - Category-wise analysis
+
+- **Modern UI/UX**
+  - Responsive design
+  - Dark mode support
+  - Animated transitions
+
+## 🛠️ Tech Stack
+
+- **Frontend**
+  - Next.js 14
+  - TypeScript
+  - Tailwind CSS
+  - Framer Motion
+  - Tremor Charts
+
+- **Backend**
+  - Next.js API Routes
+  - MySQL
+  - JWT Authentication
+  - bcrypt
+
+- **Development**
+  - ESLint
+  - Prettier
+  - Husky
+  - TypeScript
+
+## 🚀 Getting Started
+
+1. **Clone the repository**
+
+2. **Install dependencies**
+
+3. **Set up MySQL database**
+
+4. **Run the development server**
+
+
+bash
 npm run dev
-# or
+or
 yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+5. **Open [http://localhost:3000](http://localhost:3000)**
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 📝 Project Structure
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+siddharthabank/
+├── src/
+│ ├── app/ # Next.js 14 App Router
+│ ├── components/ # Reusable components
+│ ├── lib/ # Utilities and helpers
+│ ├── types/ # TypeScript types
+│ └── providers/ # Context providers
+├── public/ # Static assets
+└── prisma/ # Database schema
 
-## Learn More
 
-To learn more about Next.js, take a look at the following resources:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 🔒 Security Features
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- Password hashing with bcrypt
+- JWT token authentication
+- HTTP-only cookies
+- SQL injection prevention
+- XSS protection
+- CSRF protection
 
-## Deploy on Vercel
+## 🎨 UI Components
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- Custom form components
+- Responsive navigation
+- Interactive charts
+- Loading states
+- Toast notifications
+- Modal dialogs
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 📱 Screenshots
+
+[Add your screenshots here]
+
+## 🧪 Trial Project Information
+
+This project was developed as a trial project for DevRoom, demonstrating:
+- Modern web development practices
+- Clean code architecture
+- Secure authentication implementation
+- Responsive UI/UX design
+- Real-time data handling
+- Database management
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- [Next.js](https://nextjs.org/)
+- [Tailwind CSS](https://tailwindcss.com/)
+- [Tremor](https://www.tremor.so/)
+- [MySQL](https://www.mysql.com/)
+
+---
+
+<div align="center">
+  <p>Developed with ❤️ by Sulcrus</p>
+  <p>Trial Project for DevRoom</p>
+</div>

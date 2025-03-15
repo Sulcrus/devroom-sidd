@@ -66,6 +66,7 @@ export async function POST(req: NextRequest) {
       { status: 200 }
     );
 
+    console.log('Login successful, setting token:', token);
     response.cookies.set({
       name: "auth_token",
       value: token,
@@ -75,8 +76,6 @@ export async function POST(req: NextRequest) {
       path: "/",
       maxAge: 7 * 24 * 60 * 60, // 7 days
     });
-
-    console.log("Set auth cookie:", token);
 
     return response;
   } catch (error: any) {

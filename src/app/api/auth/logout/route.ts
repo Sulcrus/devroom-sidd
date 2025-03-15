@@ -30,8 +30,9 @@ export async function POST(req: NextRequest) {
       { status: 200 }
     );
 
-    // Make sure to clear the cookie properly
-    response.cookies.delete("auth_token", {
+    // Fix cookie deletion
+    response.cookies.set("auth_token", "", {
+      expires: new Date(0),
       path: "/",
       secure: process.env.NODE_ENV === "production",
       httpOnly: true,

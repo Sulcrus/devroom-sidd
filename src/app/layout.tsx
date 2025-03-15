@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { GeistSans } from "geist/font";
 import "./globals.css";
 import { ThemeProvider } from "@/providers/ThemeProvider";
+import { ThemeScript } from "@/components/ThemeScript";
 
 export const metadata: Metadata = {
   title: "Siddhartha Bank - BankSmartXP",
@@ -14,8 +15,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning className={GeistSans.className}>
-      <body>
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <ThemeScript />
+      </head>
+      <body className={GeistSans.className}>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

@@ -4,6 +4,9 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import useUserStore from "@/store/useUserStore";
+import useThemeStore from "@/store/useThemeStore";
+import { LoadingProfile, UserProfile, ErrorProfile } from "@/components/dashboard/UserProfile";
 
 interface User {
   id: string;
@@ -14,6 +17,11 @@ interface User {
   date_of_birth: string;
   gender: string;
   marital_status: string;
+}
+
+interface EasterEgg {
+  isVisible: boolean;
+  position: { x: number; y: number };
 }
 
 const menuItems = [
@@ -81,50 +89,119 @@ export default function DashboardLayout({
 }) {
   const pathname = usePathname();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  
+  // Zustand state
+  const { user, loading, fetchUser, logout } = useUserStore();
+  const { theme, toggleTheme } = useThemeStore();
+
+  // Easter egg state
+  const [easterEgg, setEasterEgg] = useState<EasterEgg>({
+    isVisible: false,
+    position: { x: 0, y: 0 },
+  });
+  const [clickCount, setClickCount] = useState(0);
+  const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
 
   useEffect(() => {
-    fetchUserData();
+    fetchUser();
+  }, [fetchUser]);
+
+  useEffect(() => {
+    function handleResize() {
+      setWindowSize({
+        width: window.innerWidth,
+        height: window.innerHeight
+      });
+    }
+
+    handleResize();
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const fetchUserData = async () => {
-    try {
-      const response = await fetch('/api/user');
-      if (!response.ok) {
-        throw new Error('Failed to fetch user data');
+  const handleLogoClick = () => {
+    setClickCount(prev => {
+      if (prev === 2) {
+        const randomX = Math.random() * (windowSize.width * 0.8);
+        const randomY = Math.random() * (windowSize.height * 0.8);
+        setEasterEgg({
+          isVisible: true,
+          position: { x: randomX, y: randomY }
+        });
+        return 0;
       }
-      const userData = await response.json();
-      setUser(userData);
-    } catch (error) {
-      console.error('Error fetching user data:', error);
-    } finally {
-      setLoading(false);
-    }
+      return prev + 1;
+    });
   };
 
-  const handleLogout = async () => {
-    try {
-      const res = await fetch('/api/auth/logout', { 
-        method: 'POST',
-        credentials: 'include' // Important!
-      });
-
-      if (!res.ok) {
-        throw new Error('Logout failed');
-      }
-
-      // Force reload to clear any client state
-      window.location.href = '/login';
-    } catch (error) {
-      console.error('Logout error:', error);
-      // Still redirect on error
-      window.location.href = '/login';
+  useEffect(() => {
+    if (easterEgg.isVisible) {
+      const timer = setTimeout(() => {
+        setEasterEgg(prev => ({ ...prev, isVisible: false }));
+      }, 3000);
+      return () => clearTimeout(timer);
     }
-  };
+  }, [easterEgg.isVisible]);
+
+  // Add this effect to debug state changes
+  useEffect(() => {
+    console.log('Loading state:', loading);
+    console.log('User state:', user);
+  }, [loading, user]);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      {/* Easter Egg Animation */}
+      {windowSize.width > 0 && (
+        <AnimatePresence>
+          {easterEgg.isVisible && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0 }}
+              style={{
+                position: 'fixed',
+                left: easterEgg.position.x,
+                top: easterEgg.position.y,
+                zIndex: 100,
+              }}
+              className="pointer-events-none"
+            >
+              <div className="relative">
+                {/* Blue Box Character */}
+                <div className="w-24 h-24 bg-blue-500 rounded-lg relative overflow-hidden">
+                  {/* Eyes */}
+                  <div className="absolute top-6 left-4 w-4 h-4 bg-white rounded-full">
+                    <div className="absolute top-1 left-1 w-2 h-2 bg-black rounded-full animate-pulse" />
+                  </div>
+                  <div className="absolute top-6 right-4 w-4 h-4 bg-white rounded-full">
+                    <div className="absolute top-1 left-1 w-2 h-2 bg-black rounded-full animate-pulse" />
+                  </div>
+                  {/* Mouth */}
+                  <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 w-8 h-4 bg-white rounded-full">
+                    <div className="absolute top-1 left-1/2 transform -translate-x-1/2 w-6 h-2 bg-red-400 rounded-full" />
+                  </div>
+                  {/* Blush */}
+                  <div className="absolute bottom-8 left-3 w-3 h-2 bg-pink-400 rounded-full opacity-50" />
+                  <div className="absolute bottom-8 right-3 w-3 h-2 bg-pink-400 rounded-full opacity-50" />
+                </div>
+                {/* Speech Bubble */}
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="absolute -top-12 left-1/2 transform -translate-x-1/2 bg-white dark:bg-gray-800 px-4 py-2 rounded-xl shadow-lg"
+                >
+                  <p className="text-sm font-medium text-blue-500">
+                    こんにちは! (｡◕‿◕｡)
+                  </p>
+                </motion.div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      )}
+
       {/* Sidebar */}
       <div
         className={`fixed top-0 left-0 h-full bg-white dark:bg-gray-800 shadow-lg transform transition-transform duration-200 ease-in-out ${
@@ -134,47 +211,27 @@ export default function DashboardLayout({
         <div className="flex flex-col h-full w-64">
           {/* Logo */}
           <div className="flex items-center h-16 px-6 border-b dark:border-gray-700">
-            <Link href="/dashboard" className="flex items-center space-x-2">
+            <div 
+              onClick={handleLogoClick} 
+              className="flex items-center space-x-2 cursor-pointer"
+            >
               <div className="w-8 h-8 bg-gradient-to-br from-amber-500 to-amber-600 rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold text-xl">S</span>
               </div>
               <span className="text-xl font-bold text-gray-900 dark:text-white">
                 SiddarthaBank
               </span>
-            </Link>
+            </div>
           </div>
 
           {/* User Profile */}
           <div className="p-6 border-b dark:border-gray-700">
             {loading ? (
-              <div className="animate-pulse space-y-3">
-                <div className="flex items-center space-x-3">
-                  <div className="h-10 w-10 bg-gray-200 dark:bg-gray-700 rounded-full" />
-                  <div className="space-y-2">
-                    <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded" />
-                    <div className="h-3 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
-                  </div>
-                </div>
-              </div>
+              <LoadingProfile />
+            ) : user ? (
+              <UserProfile user={user} />
             ) : (
-              <div className="flex items-center space-x-3">
-                <div className="relative">
-                  <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-amber-600 rounded-full flex items-center justify-center">
-                    <span className="text-white font-semibold">
-                      {user?.first_name?.[0]}{user?.last_name?.[0]}
-                    </span>
-                  </div>
-                  <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full" />
-                </div>
-                <div>
-                  <h2 className="font-medium text-gray-900 dark:text-white">
-                    {user?.first_name} {user?.last_name}
-                  </h2>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    {user?.email}
-                  </p>
-                </div>
-              </div>
+              <ErrorProfile onRetry={fetchUser} />
             )}
           </div>
 
@@ -206,7 +263,7 @@ export default function DashboardLayout({
           {/* Footer */}
           <div className="p-4 border-t dark:border-gray-700">
             <button
-              onClick={handleLogout}
+              onClick={logout}
               className="flex items-center w-full px-4 py-2.5 text-sm font-medium text-gray-600 rounded-lg hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
