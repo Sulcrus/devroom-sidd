@@ -39,11 +39,16 @@ export default function TransferPage() {
     description: ""
   });
   const [recipientInfo, setRecipientInfo] = useState<{
+    id: string;
     username: string;
     first_name: string;
     last_name: string;
   } | null>(null);
   const [lookupStatus, setLookupStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [username, setUsername] = useState("");
+  const [amount, setAmount] = useState("");
+  const [recipient, setRecipient] = useState<any>(null);
+  const [searchError, setSearchError] = useState("");
 
   useEffect(() => {
     fetchAccounts();
@@ -74,33 +79,29 @@ export default function TransferPage() {
   const lookupUser = async () => {
     try {
       setLookupStatus('loading');
-      // In a real app, this would be an API call
-      // const res = await fetch(`/api/users/lookup?username=${formData.toUsername}`);
-      // const data = await res.json();
       
-      // For demo purposes, we'll simulate a lookup
-      await new Promise(resolve => setTimeout(resolve, 500));
+      const res = await fetch(`/api/users/search?username=${encodeURIComponent(formData.toUsername)}`);
       
-      // Simulate finding a user (in a real app, this would come from the API)
-      if (formData.toUsername.toLowerCase() === 'johndoe') {
-        setRecipientInfo({
-          username: 'johndoe',
-          first_name: 'John',
-          last_name: 'Doe'
-        });
-        setLookupStatus('success');
-      } else if (formData.toUsername.toLowerCase() === 'janedoe') {
-        setRecipientInfo({
-          username: 'janedoe',
-          first_name: 'Jane',
-          last_name: 'Doe'
-        });
-        setLookupStatus('success');
-      } else if (formData.toUsername.length > 5) {
+      const text = await res.text(); // First get response as text
+      let data;
+      try {
+        data = JSON.parse(text); // Try to parse as JSON
+      } catch (e) {
+        console.error('Failed to parse response:', text);
+        throw new Error('Invalid response from server');
+      }
+      
+      if (!res.ok) {
+        console.error("User lookup failed:", data.error);
         setLookupStatus('error');
         setRecipientInfo(null);
+        return;
       }
+
+      setRecipientInfo(data);
+      setLookupStatus('success');
     } catch (error) {
+      console.error("User lookup error:", error);
       setLookupStatus('error');
       setRecipientInfo(null);
     }
@@ -123,26 +124,31 @@ export default function TransferPage() {
       return;
     }
     
-    if (lookupStatus !== 'success') {
+    if (lookupStatus !== 'success' || !recipientInfo) {
       toast.error("Please enter a valid recipient username");
       return;
     }
     
     try {
       setLoading(true);
+      const res = await fetch("/api/transfer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          from_account_id: formData.fromAccountId,
+          to_user_id: recipientInfo.id,
+          amount: Number(parseFloat(formData.amount).toFixed(2)),
+          description: formData.description
+        })
+      });
       
-      // In a real app, this would be an API call
-      // const res = await fetch("/api/transfers", {
-      //   method: "POST",
-      //   headers: { "Content-Type": "application/json" },
-      //   body: JSON.stringify(formData)
-      // });
-      // const data = await res.json();
+      const data = await res.json();
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      if (!res.ok) {
+        throw new Error(data.error || "Transfer failed");
+      }
       
-      toast.success(`Successfully transferred $${formData.amount} to ${recipientInfo?.first_name} ${recipientInfo?.last_name}`);
+      toast.success(`Successfully transferred $${formData.amount} to ${recipientInfo.first_name} ${recipientInfo.last_name}`);
       
       // Reset form
       setFormData({
@@ -153,8 +159,8 @@ export default function TransferPage() {
       });
       setRecipientInfo(null);
       setLookupStatus('idle');
-    } catch (error) {
-      toast.error("Transfer failed. Please try again.");
+    } catch (error: any) {
+      toast.error(error.message || "Transfer failed");
     } finally {
       setLoading(false);
     }
@@ -162,6 +168,65 @@ export default function TransferPage() {
 
   const getSelectedAccount = () => {
     return accounts.find(account => account.id === formData.fromAccountId);
+  };
+
+  const handleSearch = async () => {
+    try {
+      setLoading(true);
+      setSearchError("");
+      setRecipient(null);
+
+      const res = await fetch(`/api/users/search?username=${username}`);
+      const data = await res.json();
+
+      if (!res.ok) {
+        setSearchError(data.error || "Failed to find user");
+        return;
+      }
+
+      setRecipient(data);
+    } catch (error) {
+      console.error("Search error:", error);
+      setSearchError("Failed to search for user");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleTransfer = async () => {
+    if (!recipient || !amount) {
+      toast.error("Please enter all required information");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const res = await fetch("/api/transfer", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          recipient_id: recipient.id,
+          amount: Number(parseFloat(amount).toFixed(2))
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Transfer failed");
+      }
+
+      toast.success("Transfer successful!");
+      setUsername("");
+      setAmount("");
+      setRecipient(null);
+    } catch (error: any) {
+      toast.error(error.message || "Transfer failed");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

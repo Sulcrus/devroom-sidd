@@ -53,13 +53,13 @@ export default function DashboardPage() {
   // Update statistics whenever accounts or transactions change
   useEffect(() => {
     // Calculate statistics from the fetched data
-    const totalBalance = accounts.reduce((sum, acc) => sum + acc.balance, 0);
+    const totalBalance = accounts.reduce((sum, acc) => sum + (acc.balance || 0), 0);
     const monthlyIncome = transactions
       .filter(t => t.type === 'deposit' || t.type === 'transfer')
-      .reduce((sum, t) => sum + t.amount, 0);
+      .reduce((sum, t) => sum + (t.amount || 0), 0);
     const monthlySpending = transactions
       .filter(t => t.type === 'withdrawal')
-      .reduce((sum, t) => sum + t.amount, 0);
+      .reduce((sum, t) => sum + (t.amount || 0), 0);
 
     // Generate spending data for the chart
     const spendingData = transactions
@@ -68,9 +68,9 @@ export default function DashboardPage() {
         const date = format(new Date(t.created_at), 'MMM dd');
         const existing = acc.find(d => d.date === date);
         if (existing) {
-          existing.amount += t.amount;
+          existing.amount += t.amount || 0;
         } else {
-          acc.push({ date, amount: t.amount });
+          acc.push({ date, amount: t.amount || 0 });
         }
         return acc;
       }, [] as { date: string; amount: number }[])
@@ -91,17 +91,21 @@ export default function DashboardPage() {
       
       // Fetch accounts
       const accountsRes = await fetch('/api/accounts');
+      if (!accountsRes.ok) throw new Error('Failed to fetch accounts');
       const accountsData = await accountsRes.json();
-      setAccounts(accountsData);
+      setAccounts(Array.isArray(accountsData) ? accountsData : []);
 
       // Fetch recent transactions
       const transactionsRes = await fetch('/api/transactions?limit=5');
+      if (!transactionsRes.ok) throw new Error('Failed to fetch transactions');
       const transactionsData = await transactionsRes.json();
-      setTransactions(transactionsData);
+      setTransactions(Array.isArray(transactionsData) ? transactionsData : []);
 
     } catch (error) {
       console.error('Dashboard data fetch error:', error);
       toast.error("Failed to load dashboard data");
+      setAccounts([]);
+      setTransactions([]);
     } finally {
       setLoading(false);
     }
@@ -207,39 +211,45 @@ export default function DashboardPage() {
               <Card>
                 <Title>Recent Activity</Title>
                 <div className="mt-6 space-y-4">
-                  {transactions.map((transaction) => (
-                    <div
-                      key={transaction.id}
-                      className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg ${
+                  {Array.isArray(transactions) && transactions.length > 0 ? (
+                    transactions.map((transaction) => (
+                      <div
+                        key={transaction.id}
+                        className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={`p-2 rounded-lg ${
+                            transaction.type === 'deposit' || transaction.type === 'transfer'
+                              ? 'bg-emerald-100 dark:bg-emerald-900/30' 
+                              : 'bg-rose-100 dark:bg-rose-900/30'
+                          }`}>
+                            {transaction.type === 'deposit' || transaction.type === 'transfer' ? 
+                              <ArrowUpIcon className="w-5 h-5 text-emerald-600" /> :
+                              <ArrowDownIcon className="w-5 h-5 text-rose-600" />
+                            }
+                          </div>
+                          <div>
+                            <Text>{transaction.description}</Text>
+                            <Text className="text-xs text-gray-500">
+                              {format(new Date(transaction.created_at), 'MMM d, yyyy')}
+                            </Text>
+                          </div>
+                        </div>
+                        <Text className={
                           transaction.type === 'deposit' || transaction.type === 'transfer'
-                            ? 'bg-emerald-100 dark:bg-emerald-900/30' 
-                            : 'bg-rose-100 dark:bg-rose-900/30'
-                        }`}>
-                          {transaction.type === 'deposit' || transaction.type === 'transfer' ? 
-                            <ArrowUpIcon className="w-5 h-5 text-emerald-600" /> :
-                            <ArrowDownIcon className="w-5 h-5 text-rose-600" />
-                          }
-                        </div>
-                        <div>
-                          <Text>{transaction.description}</Text>
-                          <Text className="text-xs text-gray-500">
-                            {format(new Date(transaction.created_at), 'MMM d, yyyy')}
-                          </Text>
-                        </div>
+                            ? 'text-emerald-600' 
+                            : 'text-rose-600'
+                        }>
+                          {transaction.type === 'deposit' || transaction.type === 'transfer' ? '+' : '-'}
+                          {hideBalances ? '••••' : `$${transaction.amount.toLocaleString()}`}
+                        </Text>
                       </div>
-                      <Text className={
-                        transaction.type === 'deposit' || transaction.type === 'transfer'
-                          ? 'text-emerald-600' 
-                          : 'text-rose-600'
-                      }>
-                        {transaction.type === 'deposit' || transaction.type === 'transfer' ? '+' : '-'}
-                        {hideBalances ? '••••' : `$${transaction.amount.toLocaleString()}`}
-                      </Text>
-                    </div>
-                  ))}
+                    ))
+                  ) : (
+                    <Text className="text-gray-500 text-center py-4">
+                      No recent transactions
+                    </Text>
+                  )}
                 </div>
               </Card>
             </Col>

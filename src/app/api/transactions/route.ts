@@ -11,7 +11,7 @@ interface TransactionRow extends RowDataPacket {
   id: string;
   from_account_id: string;
   to_account_id: string;
-  amount: number;
+  amount: number | string;
   type: string;
   status: string;
   created_at: Date;
@@ -32,7 +32,15 @@ export async function GET(req: NextRequest) {
     const transactions = await query({
       query: `
         SELECT 
-          t.*,
+          t.id,
+          t.from_account_id,
+          t.to_account_id,
+          FORMAT(t.amount, 2) as amount,
+          t.type,
+          t.status,
+          t.created_at,
+          t.description,
+          t.reference_number,
           fa.account_number as from_account_number,
           ta.account_number as to_account_number
         FROM transactions t
@@ -45,7 +53,13 @@ export async function GET(req: NextRequest) {
       values: [user.id, user.id],
     }) as TransactionRow[];
 
-    return NextResponse.json(transactions);
+    // Format amounts to remove leading zeros and ensure proper decimal places
+    const formattedTransactions = transactions.map(t => ({
+      ...t,
+      amount: Number(parseFloat(t.amount as string).toFixed(2))
+    }));
+
+    return NextResponse.json(formattedTransactions);
   } catch (error) {
     console.error("Error fetching transactions:", error);
     return NextResponse.json(
