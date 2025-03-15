@@ -234,10 +234,10 @@ export default function DashboardPage() {
 
   const totalBalance = accounts.reduce((sum, acc) => sum + acc.balance, 0);
   const totalIncome = transactions
-    .filter(t => t.type === 'deposit')
+    .filter(t => t.type === 'credit')
     .reduce((sum, t) => sum + t.amount, 0);
   const totalSpending = transactions
-    .filter(t => t.type === 'withdrawal')
+    .filter(t => t.type === 'debit')
     .reduce((sum, t) => sum + t.amount, 0);
 
   return (
