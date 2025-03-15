@@ -1,267 +1,133 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Card, Title, Text, TextInput, Button, Select, SelectItem, Badge, Metric } from "@tremor/react";
-import { Account, User } from "@/types";
+import { useState } from "react";
+import { Card, Title, Text, TextInput, Button, Badge, Metric, Tab, TabList } from "@tremor/react";
 import { motion } from "framer-motion";
-import { 
-  BanknotesIcon, 
-  CreditCardIcon, 
+import {
+  CreditCardIcon,
   BuildingLibraryIcon,
-  PhoneIcon
+  PhoneIcon,
+  LightBulbIcon,
+  WifiIcon,
+  TvIcon,
+  GlobeAltIcon,
 } from "@heroicons/react/24/outline";
 
-const PAYMENT_CATEGORIES = [
-  { id: 'utilities', name: 'Utilities', icon: BuildingLibraryIcon },
-  { id: 'mobile', name: 'Mobile Recharge', icon: PhoneIcon },
-  { id: 'credit-card', name: 'Credit Card', icon: CreditCardIcon },
-  { id: 'other', name: 'Other Payments', icon: BanknotesIcon },
+const container = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: { staggerChildren: 0.1 }
+  }
+};
+
+const item = {
+  hidden: { y: 20, opacity: 0 },
+  show: { y: 0, opacity: 1 }
+};
+
+const billCategories = [
+  { id: 'utilities', name: 'Utilities', icon: LightBulbIcon },
+  { id: 'internet', name: 'Internet', icon: WifiIcon },
+  { id: 'phone', name: 'Phone', icon: PhoneIcon },
+  { id: 'tv', name: 'TV & Cable', icon: TvIcon },
+  { id: 'education', name: 'Education', icon: BuildingLibraryIcon },
+  { id: 'other', name: 'Other', icon: GlobeAltIcon },
 ];
 
 export default function PaymentsPage() {
-  const [accounts, setAccounts] = useState<Account[]>([]);
-  const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-
-  const [formData, setFormData] = useState({
-    fromAccountId: "",
-    category: "",
-    billerId: "",
-    amount: "",
-    description: "",
-  });
-
-  useEffect(() => {
-    fetchAccounts();
-  }, []);
-
-  const fetchAccounts = async () => {
-    try {
-      const res = await fetch("/api/accounts");
-      if (res.ok) {
-        const data = await res.json();
-        setAccounts(data);
-      }
-    } catch (error) {
-      console.error("Error fetching accounts:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    const account = accounts.find(a => a.id === formData.fromAccountId);
-    setSelectedAccount(account || null);
-  }, [formData.fromAccountId, accounts]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setSuccess(null);
-    setSubmitting(true);
-
-    try {
-      const res = await fetch("/api/payments", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          fromAccountId: formData.fromAccountId,
-          billerId: formData.billerId,
-          amount: parseFloat(formData.amount),
-          category: formData.category,
-          description: formData.description,
-        }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error);
-      }
-
-      setSuccess(`Payment successful! Reference: ${data.referenceNumber}`);
-      setFormData({
-        fromAccountId: "",
-        category: "",
-        billerId: "",
-        amount: "",
-        description: "",
-      });
-
-      // Refresh account data
-      fetchAccounts();
-    } catch (error: any) {
-      setError(error.message);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-amber-500" />
-      </div>
-    );
-  }
+  const [activeTab, setActiveTab] = useState('bills');
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white">
-            Make a Payment
-          </h1>
-          <Text className="mt-2 text-gray-600 dark:text-gray-400">
-            Pay your bills and make other payments
-          </Text>
-        </div>
+    <div className="p-8 max-w-7xl mx-auto">
+      <motion.div
+        variants={container}
+        initial="hidden"
+        animate="show"
+        className="space-y-6"
+      >
+        {/* Header */}
+        <motion.div variants={item}>
+          <Title>Bill Payments</Title>
+          <Text>Pay your bills securely and easily</Text>
+        </motion.div>
 
-        <div className="grid gap-8 lg:grid-cols-12">
-          {/* Payment Categories */}
-          <div className="lg:col-span-8">
-            <div className="grid gap-6 md:grid-cols-2">
-              {PAYMENT_CATEGORIES.map(({ id, name, icon: Icon }) => (
-                <Card 
-                  key={id}
-                  className={`p-6 cursor-pointer transition-all ${
-                    formData.category === id 
-                      ? 'ring-2 ring-amber-500 shadow-lg' 
-                      : 'hover:shadow-md'
-                  }`}
-                  onClick={() => setFormData(prev => ({ ...prev, category: id }))}
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 bg-amber-100 dark:bg-amber-900 rounded-lg">
-                      <Icon className="h-6 w-6 text-amber-600 dark:text-amber-400" />
-                    </div>
-                    <Title>{name}</Title>
-                  </div>
-                </Card>
-              ))}
-            </div>
+        {/* Tabs */}
+        <motion.div variants={item}>
+          <TabList 
+            defaultValue="bills"
+            onValueChange={setActiveTab}
+            className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-lg"
+          >
+            <Tab value="bills" text="Bills & Utilities" />
+            <Tab value="scheduled" text="Scheduled" />
+            <Tab value="history" text="History" />
+          </TabList>
+        </motion.div>
 
-            {/* Payment Form */}
-            {formData.category && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="mt-8"
+        {/* Quick Actions */}
+        <motion.div variants={item}>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            {billCategories.map((category) => (
+              <Card 
+                key={category.id}
+                className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-lg hover:shadow-lg transition-all duration-200 cursor-pointer"
               >
-                <Card className="p-6">
-                  <form onSubmit={handleSubmit} className="space-y-6">
-                    <div>
-                      <Text>From Account</Text>
-                      <Select
-                        value={formData.fromAccountId}
-                        onValueChange={(value) => setFormData(prev => ({ ...prev, fromAccountId: value }))}
-                        placeholder="Select account"
-                      >
-                        {accounts.map((account) => (
-                          <SelectItem key={account.id} value={account.id}>
-                            {account.account_type.toUpperCase()} - {account.currency} {account.balance.toLocaleString()}
-                          </SelectItem>
-                        ))}
-                      </Select>
-                    </div>
-
-                    <div>
-                      <Text>Biller ID / Account Number</Text>
-                      <TextInput
-                        value={formData.billerId}
-                        onChange={(e) => setFormData(prev => ({ ...prev, billerId: e.target.value }))}
-                        placeholder="Enter biller ID or account number"
-                      />
-                    </div>
-
-                    <div>
-                      <Text>Amount</Text>
-                      <TextInput
-                        value={formData.amount}
-                        onChange={(e) => setFormData(prev => ({ ...prev, amount: e.target.value }))}
-                        placeholder="Enter amount"
-                        type="number"
-                        step="0.01"
-                      />
-                    </div>
-
-                    <div>
-                      <Text>Description (Optional)</Text>
-                      <TextInput
-                        value={formData.description}
-                        onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                        placeholder="Add a note"
-                      />
-                    </div>
-
-                    <Button
-                      type="submit"
-                      color="amber"
-                      size="lg"
-                      loading={submitting}
-                      disabled={!formData.fromAccountId || !formData.billerId || !formData.amount}
-                      className="w-full"
-                    >
-                      Make Payment
-                    </Button>
-                  </form>
-                </Card>
-              </motion.div>
-            )}
-          </div>
-
-          {/* Right Sidebar */}
-          <div className="lg:col-span-4 space-y-6">
-            {selectedAccount && (
-              <Card className="p-6">
-                <Title>Selected Account</Title>
-                <div className="mt-4 space-y-4">
-                  <div>
-                    <Text className="text-gray-600 dark:text-gray-400">Account Type</Text>
-                    <Text className="font-medium">{selectedAccount.account_type.toUpperCase()}</Text>
+                <div className="flex flex-col items-center text-center gap-2">
+                  <div className="p-3 bg-amber-100 dark:bg-amber-900/30 rounded-xl">
+                    <category.icon className="w-6 h-6 text-amber-600" />
                   </div>
-                  <div>
-                    <Text className="text-gray-600 dark:text-gray-400">Available Balance</Text>
-                    <Metric className="text-amber-500">
-                      {selectedAccount.currency} {selectedAccount.balance.toLocaleString()}
-                    </Metric>
-                  </div>
-                  <div>
-                    <Text className="text-gray-600 dark:text-gray-400">Status</Text>
-                    <Badge color={selectedAccount.status === 'active' ? 'green' : 'red'}>
-                      {selectedAccount.status.toUpperCase()}
-                    </Badge>
-                  </div>
+                  <Text>{category.name}</Text>
                 </div>
               </Card>
-            )}
-
-            {/* Status Messages */}
-            {error && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="p-4 bg-red-50 border border-red-200 rounded-xl"
-              >
-                <Text className="text-red-600">{error}</Text>
-              </motion.div>
-            )}
-
-            {success && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="p-4 bg-green-50 border border-green-200 rounded-xl"
-              >
-                <Text className="text-green-600">{success}</Text>
-              </motion.div>
-            )}
+            ))}
           </div>
-        </div>
-      </div>
+        </motion.div>
+
+        {/* Recent Payments */}
+        <motion.div variants={item}>
+          <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-lg">
+            <Title>Recent Payments</Title>
+            <div className="mt-4 space-y-4">
+              {[1, 2, 3].map((_, i) => (
+                <div key={i} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
+                  <div className="flex items-center gap-4">
+                    <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                      <LightBulbIcon className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <Text>Electricity Bill</Text>
+                      <Text className="text-xs text-gray-500">Paid on Mar 15, 2024</Text>
+                    </div>
+                  </div>
+                  <Badge color="emerald">Paid</Badge>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </motion.div>
+
+        {/* Scheduled Payments */}
+        <motion.div variants={item}>
+          <Card className="bg-gradient-to-br from-amber-500 to-amber-600 text-white">
+            <div className="flex items-center justify-between">
+              <div>
+                <Text className="text-white/80">Next Payment Due</Text>
+                <Metric className="text-white">Internet Bill</Metric>
+                <Text className="text-white/80 mt-1">Due in 5 days</Text>
+              </div>
+              <Button 
+                size="sm"
+                color="white"
+                variant="secondary"
+                className="bg-white/10 hover:bg-white/20"
+              >
+                Pay Now
+              </Button>
+            </div>
+          </Card>
+        </motion.div>
+      </motion.div>
     </div>
   );
 } 

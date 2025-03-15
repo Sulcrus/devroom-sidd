@@ -1,443 +1,210 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { Card, Title, Text, TextInput, Button, Select, SelectItem, Badge, Metric } from "@tremor/react";
-import { Account, User, Transaction } from "@/types";
 import { motion } from "framer-motion";
-import { ArrowRightIcon, UserCircleIcon, CreditCardIcon, BanknotesIcon, ArrowUpIcon, ArrowDownIcon, ClockIcon, InformationCircleIcon } from "@heroicons/react/24/outline";
-import { format } from "date-fns";
+import useUserStore from "@/store/useUserStore";
 import { toast } from "sonner";
+import { Account } from "@/types";
+import {
+  ArrowRightIcon,
+  UserCircleIcon,
+  CreditCardIcon,
+  BanknotesIcon,
+} from "@heroicons/react/24/outline";
+
+const container = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: { staggerChildren: 0.1 }
+  }
+};
+
+const item = {
+  hidden: { y: 20, opacity: 0 },
+  show: { y: 0, opacity: 1 }
+};
 
 export default function TransferPage() {
-  const router = useRouter();
-  const [user, setUser] = useState<User | null>(null);
+  const { user } = useUserStore();
   const [accounts, setAccounts] = useState<Account[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-  const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
-  const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
-
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     fromAccountId: "",
-    toAccountId: "",
+    toUsername: "",
     amount: "",
-    description: "",
+    description: ""
   });
 
   useEffect(() => {
-    Promise.all([fetchUser(), fetchAccounts(), fetchRecentTransactions()]).finally(() => setLoading(false));
+    fetchAccounts();
   }, []);
-
-  const fetchUser = async () => {
-    try {
-      const res = await fetch("/api/user");
-      if (res.ok) {
-        const userData = await res.json();
-        setUser(userData);
-      }
-    } catch (error) {
-      console.error("Error fetching user:", error);
-    }
-  };
 
   const fetchAccounts = async () => {
     try {
       const res = await fetch("/api/accounts");
-      if (res.ok) {
-        const data = await res.json();
-        setAccounts(data);
-      }
+      const data = await res.json();
+      setAccounts(data);
     } catch (error) {
-      console.error("Error fetching accounts:", error);
+      toast.error("Failed to load accounts");
     }
   };
-
-  const fetchRecentTransactions = async () => {
-    try {
-      const res = await fetch("/api/transactions?limit=5");
-      if (res.ok) {
-        const data = await res.json();
-        setRecentTransactions(data);
-      }
-    } catch (error) {
-      console.error("Error fetching transactions:", error);
-    }
-  };
-
-  useEffect(() => {
-    const account = accounts.find(a => a.id === formData.fromAccountId);
-    setSelectedAccount(account || null);
-  }, [formData.fromAccountId, accounts]);
 
   const handleTransfer = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitting(true);
+    setLoading(true);
 
     try {
-      const response = await fetch('/api/transfers', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          fromAccountId: formData.fromAccountId,
-          toAccountId: formData.toAccountId,
-          amount: parseFloat(formData.amount),
-          description: formData.description
-        })
+      const res = await fetch("/api/transfers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Transfer failed');
+      if (!res.ok) {
+        throw new Error("Transfer failed");
       }
 
-      toast.success('Transfer successful!', {
-        description: `Reference number: ${data.referenceNumber}`,
-        duration: 5000
-      });
-
-      // Reset form
-      setFormData({
-        fromAccountId: '',
-        toAccountId: '',
-        amount: '',
-        description: ''
-      });
-
-      // Refresh data
-      await Promise.all([
-        fetchAccounts(),
-        fetchRecentTransactions()
-      ]);
-
+      toast.success("Transfer successful!");
+      setFormData({ fromAccountId: "", toUsername: "", amount: "", description: "" });
+      fetchAccounts(); // Refresh accounts
     } catch (error) {
-      console.error('Transfer error:', error);
-      toast.error(error instanceof Error ? error.message : 'Transfer failed', {
-        duration: 5000
-      });
+      toast.error("Transfer failed");
     } finally {
-      setSubmitting(false);
+      setLoading(false);
     }
   };
 
-  // Calculate net change from recent transactions
-  const netChange = recentTransactions.reduce((sum, t) => {
-    if (t.to_account_id === selectedAccount?.id) {
-      return sum + t.amount;
-    } else if (t.from_account_id === selectedAccount?.id) {
-      return sum - t.amount;
-    }
-    return sum;
-  }, 0);
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-amber-500" />
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-        {/* Info Box */}
-        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <InformationCircleIcon className="w-5 h-5 text-blue-600" />
-            </div>
-            <div>
-              <h3 className="font-medium text-blue-900">Quick Transfer Tips</h3>
-              <p className="text-sm text-blue-700">
-                Enter the recipient's username to transfer money instantly. Make sure to verify 
-                the recipient's details before confirming.
-              </p>
-            </div>
-          </div>
-        </div>
+    <div className="p-8 max-w-7xl mx-auto">
+      <motion.div
+        variants={container}
+        initial="hidden"
+        animate="show"
+        className="grid grid-cols-1 lg:grid-cols-2 gap-8"
+      >
+        {/* Transfer Form */}
+        <motion.div variants={item}>
+          <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-lg">
+            <Title>Make a Transfer</Title>
+            <Text>Send money to another user</Text>
 
-        <div className="grid gap-8 lg:grid-cols-12">
-          {/* Left Column - Transfer Form */}
-          <div className="lg:col-span-7 space-y-6">
-            <Card className="p-8 shadow-lg">
-              <form onSubmit={handleTransfer} className="space-y-8">
-                {/* From Account Section */}
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2">
-                    <CreditCardIcon className="h-5 w-5 text-amber-500" />
-                    <Title>From Account</Title>
-                  </div>
-                  <Select
-                    value={formData.fromAccountId}
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, fromAccountId: value }))}
-                    required
-                    className="mt-2"
-                  >
-                    {accounts.map((account) => (
-                      <SelectItem key={account.id} value={account.id}>
-                        <div className="flex justify-between items-center w-full">
-                          <span>{account.account_type.toUpperCase()} - {account.account_number}</span>
-                          <span className="text-amber-500 font-medium">
-                            {account.currency} {account.balance.toLocaleString()}
-                          </span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </Select>
-                </div>
-
-                {/* Recipient Section */}
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2">
-                    <CreditCardIcon className="h-5 w-5 text-amber-500" />
-                    <Title>To Account</Title>
-                  </div>
-                  <TextInput
-                    placeholder="Enter account number"
-                    value={formData.toAccountId}
-                    onChange={(e) => setFormData(prev => ({ ...prev, toAccountId: e.target.value }))}
-                    required
-                  />
-                </div>
-
-                {/* Amount Section */}
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2">
-                    <BanknotesIcon className="h-5 w-5 text-amber-500" />
-                    <Title>Amount</Title>
-                  </div>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <span className="text-gray-500">{selectedAccount?.currency || '$'}</span>
-                    </div>
-                    <TextInput
-                      type="number"
-                      step="0.01"
-                      min="0.01"
-                      placeholder="0.00"
-                      value={formData.amount}
-                      onChange={(e) => setFormData(prev => ({ ...prev, amount: e.target.value }))}
-                      required
-                      className="pl-8 text-lg"
-                    />
-                  </div>
-                </div>
-
-                {/* Description Section */}
-                <div className="space-y-4">
-                  <Title>Description</Title>
-                  <TextInput
-                    placeholder="What's this payment for? (Optional)"
-                    value={formData.description}
-                    onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                  />
-                </div>
-
-                <Button
-                  type="submit"
-                  loading={submitting}
-                  disabled={submitting}
-                  size="lg"
-                  className="w-full bg-amber-500 hover:bg-amber-600 h-14 mt-6 text-lg"
+            <form onSubmit={handleTransfer} className="mt-6 space-y-6">
+              <div className="space-y-2">
+                <Text>From Account</Text>
+                <Select
+                  value={formData.fromAccountId}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, fromAccountId: value }))}
+                  required
                 >
-                  {submitting ? (
-                    "Processing..."
-                  ) : (
-                    <span className="flex items-center justify-center gap-2">
-                      Transfer
-                    </span>
-                  )}
-                </Button>
-              </form>
-            </Card>
-          </div>
+                  {accounts.map((account) => (
+                    <SelectItem key={account.id} value={account.id}>
+                      <div className="flex justify-between items-center w-full">
+                        <span>{account.account_type.toUpperCase()} - {account.account_number}</span>
+                        <Badge color="amber">{account.currency} {account.balance}</Badge>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </Select>
+              </div>
 
-          {/* Right Column - Account Details & Recent Transactions */}
-          <div className="lg:col-span-5 space-y-6">
-            {selectedAccount && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3 }}
+              <div className="space-y-2">
+                <Text>Recipient Username</Text>
+                <TextInput
+                  icon={UserCircleIcon}
+                  placeholder="Enter username"
+                  value={formData.toUsername}
+                  onChange={(e) => setFormData(prev => ({ ...prev, toUsername: e.target.value }))}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Text>Amount</Text>
+                <TextInput
+                  icon={BanknotesIcon}
+                  placeholder="Enter amount"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={formData.amount}
+                  onChange={(e) => setFormData(prev => ({ ...prev, amount: e.target.value }))}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Text>Description</Text>
+                <TextInput
+                  placeholder="What's this for?"
+                  value={formData.description}
+                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                />
+              </div>
+
+              <Button
+                type="submit"
+                color="amber"
+                size="lg"
+                icon={ArrowRightIcon}
+                loading={loading}
+                loadingText="Processing..."
+                className="w-full"
               >
-                <Card className="p-8 shadow-lg bg-gradient-to-br from-amber-50 to-white dark:from-gray-800 dark:to-gray-900">
-                  <div className="space-y-8">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <Text className="text-gray-600 dark:text-gray-400">Selected Account</Text>
-                        <Title className="mt-1">{selectedAccount.account_type.toUpperCase()}</Title>
-                      </div>
-                      <Badge 
-                        color={selectedAccount.status === 'active' ? 'green' : 'red'}
-                        size="lg"
-                      >
-                        {selectedAccount.status.toUpperCase()}
-                      </Badge>
-                    </div>
+                Send Money
+              </Button>
+            </form>
+          </Card>
+        </motion.div>
 
-                    <div>
-                      <Text className="text-gray-600 dark:text-gray-400">Account Number</Text>
-                      <Text className="text-lg font-medium mt-1">
-                        {selectedAccount.account_number}
-                      </Text>
-                    </div>
-
-                    <div>
-                      <Text className="text-gray-600 dark:text-gray-400">Available Balance</Text>
-                      <Metric className="mt-2 text-amber-500">
-                        {selectedAccount.currency} {selectedAccount.balance.toLocaleString()}
-                      </Metric>
-                    </div>
-                  </div>
-                </Card>
-              </motion.div>
-            )}
-
-            {/* Recent Transactions */}
-            <Card className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <Title>Recent Transactions</Title>
-                  <Text className="text-gray-500">Last 5 transactions</Text>
-                </div>
-                <Button 
-                  size="sm" 
-                  variant="light"
-                  icon={ClockIcon}
-                  onClick={() => router.push('/dashboard/transactions')}
-                >
-                  View All
-                </Button>
+        {/* Recent Transfers & Info */}
+        <motion.div variants={item} className="space-y-6">
+          <Card className="bg-gradient-to-br from-amber-500 to-amber-600 text-white">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-white/10 rounded-xl">
+                <CreditCardIcon className="w-8 h-8 text-white" />
               </div>
-              
-              <div className="space-y-4">
-                {recentTransactions.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Text className="text-gray-500">No recent transactions</Text>
-                  </div>
-                ) : (
-                  recentTransactions.map((transaction) => {
-                    const isReceiver = transaction.to_account_id === selectedAccount?.id;
-                    const amount = transaction.amount.toLocaleString();
-                    const date = new Date(transaction.created_at);
-                    
-                    return (
-                      <div 
-                        key={transaction.id} 
-                        className="p-4 rounded-xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 hover:shadow-md transition-shadow"
-                      >
-                        <div className="flex items-start justify-between">
-                          <div className="flex items-start space-x-4">
-                            <div className={`
-                              mt-1 w-10 h-10 rounded-full flex items-center justify-center
-                              ${isReceiver ? 'bg-green-100 dark:bg-green-900' : 'bg-red-100 dark:bg-red-900'}
-                            `}>
-                              {isReceiver ? (
-                                <ArrowDownIcon className="w-5 h-5 text-green-600 dark:text-green-400" />
-                              ) : (
-                                <ArrowUpIcon className="w-5 h-5 text-red-600 dark:text-red-400" />
-                              )}
-                            </div>
-                            <div className="space-y-1">
-                              <Text className="font-medium">
-                                {isReceiver ? 'Received from' : 'Sent to'}{' '}
-                                <span className="font-semibold">
-                                  {isReceiver ? transaction.from_account_number : transaction.to_account_number}
-                                </span>
-                              </Text>
-                              <div className="flex items-center space-x-2 text-sm text-gray-500">
-                                <span>{format(date, 'MMM d, yyyy • h:mm a')}</span>
-                                <span>•</span>
-                                <span className="font-mono">{transaction.reference_number}</span>
-                              </div>
-                              {transaction.description && (
-                                <Text className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                                  {transaction.description}
-                                </Text>
-                              )}
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <Text className={`text-lg font-semibold ${
-                              isReceiver ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
-                            }`}>
-                              {isReceiver ? '+' : '-'}{selectedAccount?.currency} {amount}
-                            </Text>
-                            <Badge 
-                              size="sm"
-                              color={transaction.category_color || 'gray'}
-                              className="mt-1"
-                            >
-                              {transaction.category_name}
-                            </Badge>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
+              <div>
+                <Text className="text-white/80">Available Balance</Text>
+                <Metric className="text-white">
+                  ${accounts.reduce((sum, acc) => sum + acc.balance, 0).toLocaleString()}
+                </Metric>
               </div>
-
-              {recentTransactions.length > 0 && (
-                <div className="mt-6 pt-4 border-t dark:border-gray-700">
-                  <div className="flex justify-between items-center">
-                    <Text className="text-gray-500">Total Transactions</Text>
-                    <Text className="font-medium">{recentTransactions.length}</Text>
-                  </div>
-                  <div className="flex justify-between items-center mt-2">
-                    <Text className="text-gray-500">Net Change</Text>
-                    <Text className={`font-medium ${
-                      netChange > 0 ? 'text-green-600' : netChange < 0 ? 'text-red-600' : 'text-gray-600'
-                    }`}>
-                      {selectedAccount?.currency} {Math.abs(netChange).toLocaleString()}
-                      {netChange !== 0 && (netChange > 0 ? ' (+)' : ' (-)')}
-                    </Text>
-                  </div>
-                </div>
-              )}
-            </Card>
-
-            {/* Status Messages */}
-            <div className="space-y-4">
-              {error && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="p-6 bg-red-50 border border-red-200 rounded-xl shadow-sm"
-                >
-                  <div className="flex items-center text-red-600">
-                    <svg className="w-6 h-6 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" />
-                    </svg>
-                    <Text className="font-medium text-lg">{error}</Text>
-                  </div>
-                </motion.div>
-              )}
-
-              {success && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="p-6 bg-green-50 border border-green-200 rounded-xl shadow-sm"
-                >
-                  <div className="flex items-center text-green-600">
-                    <svg className="w-6 h-6 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" />
-                    </svg>
-                    <Text className="font-medium text-lg">{success}</Text>
-                  </div>
-                </motion.div>
-              )}
             </div>
-          </div>
-        </div>
-      </div>
+          </Card>
+
+          <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-lg">
+            <Title>Transfer Tips</Title>
+            <div className="mt-4 space-y-4">
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
+                  <svg className="w-5 h-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <Text>Double-check the recipient's username before sending</Text>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
+                  <svg className="w-5 h-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                </div>
+                <Text>Add a description to help you track your transfers</Text>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                  <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <Text>Transfers are usually instant between Siddhartha Bank accounts</Text>
+              </div>
+            </div>
+          </Card>
+        </motion.div>
+      </motion.div>
     </div>
   );
 } 

@@ -23,7 +23,7 @@ import { User, Account, Transaction, Statistics } from "@/types";
 import { motion, AnimatePresence } from "framer-motion";
 import useUserStore from "@/store/useUserStore";
 import { toast } from "sonner";
-import { ArrowUpIcon, ArrowDownIcon, CreditCardIcon, BanknotesIcon } from "@heroicons/react/24/outline";
+import { ArrowUpIcon, ArrowDownIcon, CreditCardIcon, BanknotesIcon, ArrowTrendingUpIcon, EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
 
 ChartJS.register(
   CategoryScale,
@@ -36,6 +36,22 @@ ChartJS.register(
   Filler
 );
 
+const container = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+      delayChildren: 0.3,
+    }
+  }
+};
+
+const item = {
+  hidden: { y: 20, opacity: 0 },
+  show: { y: 0, opacity: 1 }
+};
+
 export default function DashboardPage() {
   const router = useRouter();
   const { user } = useUserStore();
@@ -45,6 +61,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { theme, setTheme } = useTheme();
+  const [hideBalances, setHideBalances] = useState(false);
 
   // Fetch dashboard data
   useEffect(() => {
@@ -212,194 +229,212 @@ export default function DashboardPage() {
         exit={{ opacity: 0 }}
         className="min-h-screen bg-gradient-to-b from-amber-50 to-white dark:from-gray-900 dark:to-gray-800"
       >
-        <div className="max-w-7xl mx-auto p-6 space-y-8">
+        <div className="p-8 max-w-7xl mx-auto">
           {/* Header Section */}
-          <div className="flex items-center justify-between">
-            <motion.div
-              initial={{ x: -20, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-            >
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-                Welcome back, {user?.first_name || 'User'}! 👋
-              </h1>
-              <p className="text-gray-600 dark:text-gray-400 mt-1">
-                Here's your financial summary for today
-              </p>
-            </motion.div>
-            <button
-              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              className="p-3 rounded-xl bg-white dark:bg-gray-800 shadow-lg hover:shadow-xl transition-all duration-200"
-            >
-              {theme === 'dark' ? '🌞' : '🌙'}
-            </button>
-          </div>
-
-          {/* Stats Overview */}
-          <div className="grid gap-6 md:grid-cols-3">
-            <motion.div
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.1 }}
-            >
-              <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-lg border border-amber-100/20 hover:shadow-lg transition-all duration-200">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-amber-100 dark:bg-amber-900/30 rounded-xl">
-                    <BanknotesIcon className="w-6 h-6 text-amber-600 dark:text-amber-500" />
-                  </div>
-                  <div>
-                    <Text>Total Balance</Text>
-                    <Metric className="text-amber-600 dark:text-amber-500">
-                      ${statistics?.totalBalance.toLocaleString()}
-                    </Metric>
-                  </div>
-                </div>
-              </Card>
-            </motion.div>
-
-            <motion.div
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.2 }}
-            >
-              <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-lg border border-green-100/20">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-xl">
-                    <ArrowUpIcon className="w-6 h-6 text-green-600 dark:text-green-500" />
-                  </div>
-                  <div>
-                    <Text>Monthly Income</Text>
-                    <Metric className="text-green-600 dark:text-green-500">
-                      ${statistics?.monthlyIncome.toLocaleString()}
-                    </Metric>
-                  </div>
-                </div>
-              </Card>
-            </motion.div>
-
-            <motion.div
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.3 }}
-            >
-              <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-lg border border-red-100/20">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-xl">
-                    <ArrowDownIcon className="w-6 h-6 text-red-600 dark:text-red-500" />
-                  </div>
-                  <div>
-                    <Text>Monthly Spending</Text>
-                    <Metric className="text-red-600 dark:text-red-500">
-                      ${statistics?.monthlySpending.toLocaleString()}
-                    </Metric>
-                  </div>
-                </div>
-              </Card>
-            </motion.div>
-          </div>
-
-          {/* Chart Section */}
-          <motion.div
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.4 }}
+          <motion.div 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-8"
           >
-            <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-lg border border-gray-100/20">
-              <Title>Income vs Spending Trends</Title>
-              <div className="h-[400px] mt-4">
-                <AreaChart
-                  data={statistics?.transactionStats || []}
-                  index="date"
-                  categories={["income", "spending"]}
-                  colors={["emerald", "rose"]}
-                  valueFormatter={(value) => `$${value.toLocaleString()}`}
-                  showLegend
-                  showGridLines={false}
-                  curveType="natural"
-                  className="h-full"
-                />
+            <div className="flex justify-between items-center">
+              <div>
+                <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">
+                  Welcome back, {user?.first_name}! ��
+                </h1>
+                <p className="text-gray-600 dark:text-gray-400 mt-1">
+                  Here's your financial overview
+                </p>
               </div>
-            </Card>
-          </motion.div>
-
-          {/* Accounts Section */}
-          <motion.div
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.5 }}
-          >
-            <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-              {accounts.map((account, index) => (
-                <Card
-                  key={account.id}
-                  className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-lg border border-gray-100/20 hover:shadow-lg transition-all duration-200"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
-                        <CreditCardIcon className="w-5 h-5 text-amber-600 dark:text-amber-500" />
-                      </div>
-                      <div>
-                        <Text>{account.account_type.toUpperCase()}</Text>
-                        <Text className="text-xs text-gray-500">
-                          •••• {account.account_number.slice(-4)}
-                        </Text>
-                      </div>
-                    </div>
-                    <Badge color={
-                      account.status === 'active' ? 'green' :
-                      account.status === 'frozen' ? 'red' : 'gray'
-                    }>
-                      {account.status}
-                    </Badge>
-                  </div>
-                  <Metric className="mt-4">
-                    {account.currency} {account.balance.toLocaleString()}
-                  </Metric>
-                </Card>
-              ))}
+              <button
+                onClick={() => setHideBalances(!hideBalances)}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+              >
+                {hideBalances ? (
+                  <EyeSlashIcon className="w-5 h-5 text-gray-500" />
+                ) : (
+                  <EyeIcon className="w-5 h-5 text-gray-500" />
+                )}
+              </button>
             </div>
           </motion.div>
 
-          {/* Recent Transactions */}
           <motion.div
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.6 }}
+            variants={container}
+            initial="hidden"
+            animate="show"
+            className="space-y-6"
           >
-            <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-lg border border-gray-100/20">
-              <Title>Recent Transactions</Title>
-              <div className="divide-y dark:divide-gray-700">
-                {transactions.map((transaction) => (
-                  <div
-                    key={transaction.id}
-                    className="flex items-center justify-between py-4"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className={`p-2 rounded-lg ${
-                        transaction.type === 'deposit' ? 'bg-green-100 dark:bg-green-900/30' : 'bg-red-100 dark:bg-red-900/30'
-                      }`}>
-                        {transaction.type === 'deposit' ? 
-                          <ArrowUpIcon className="w-5 h-5 text-green-600 dark:text-green-500" /> :
-                          <ArrowDownIcon className="w-5 h-5 text-red-600 dark:text-red-500" />
-                        }
-                      </div>
-                      <div>
-                        <Text>{transaction.description}</Text>
-                        <Text className="text-xs text-gray-500">
-                          {format(new Date(transaction.created_at), 'MMM d, yyyy')}
-                        </Text>
-                      </div>
-                    </div>
-                    <Text className={
-                      transaction.type === 'deposit' ? 'text-green-600 dark:text-green-500' : 'text-red-600 dark:text-red-500'
-                    }>
-                      {transaction.type === 'deposit' ? '+' : '-'}
-                      ${transaction.amount.toLocaleString()}
-                    </Text>
+            {/* Balance Cards */}
+            <motion.div variants={item} className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Card 
+                className="bg-gradient-to-br from-amber-500 to-amber-600 text-white hover:shadow-lg transition-shadow duration-200"
+                decoration="top"
+                decorationColor="amber"
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <div className="p-2 bg-white/10 rounded-lg">
+                    <BanknotesIcon className="w-6 h-6 text-white" />
                   </div>
+                  <Badge color="white" size="sm">Total Balance</Badge>
+                </div>
+                <Metric className="text-white">
+                  {hideBalances ? '••••••' : `$${statistics?.totalBalance.toLocaleString()}`}
+                </Metric>
+                <Text className="text-white/80 mt-2">Across all accounts</Text>
+              </Card>
+
+              <Card 
+                className="bg-gradient-to-br from-emerald-500 to-emerald-600 text-white"
+                decoration="top"
+                decorationColor="emerald"
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <div className="p-2 bg-white/10 rounded-lg">
+                    <ArrowTrendingUpIcon className="w-6 h-6 text-white" />
+                  </div>
+                  <Badge color="white" size="sm">Monthly Income</Badge>
+                </div>
+                <Metric className="text-white">
+                  {hideBalances ? '••••••' : `$${statistics?.monthlyIncome.toLocaleString()}`}
+                </Metric>
+                <Text className="text-white/80 mt-2">Last 30 days</Text>
+              </Card>
+
+              <Card 
+                className="bg-gradient-to-br from-rose-500 to-rose-600 text-white"
+                decoration="top"
+                decorationColor="rose"
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <div className="p-2 bg-white/10 rounded-lg">
+                    <ArrowDownIcon className="w-6 h-6 text-white" />
+                  </div>
+                  <Badge color="white" size="sm">Monthly Spending</Badge>
+                </div>
+                <Metric className="text-white">
+                  {hideBalances ? '••••••' : `$${statistics?.monthlySpending.toLocaleString()}`}
+                </Metric>
+                <Text className="text-white/80 mt-2">Last 30 days</Text>
+              </Card>
+            </motion.div>
+
+            {/* Chart Section */}
+            <motion.div variants={item}>
+              <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-lg">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <Title>Financial Overview</Title>
+                    <Text>Income vs Spending Trends</Text>
+                  </div>
+                  <div className="flex gap-2">
+                    <Badge color="emerald">Income</Badge>
+                    <Badge color="rose">Spending</Badge>
+                  </div>
+                </div>
+                <div className="h-[400px] mt-4">
+                  <AreaChart
+                    data={statistics?.transactionStats || []}
+                    index="date"
+                    categories={["income", "spending"]}
+                    colors={["emerald", "rose"]}
+                    valueFormatter={(value) => `$${value.toLocaleString()}`}
+                    showLegend={false}
+                    showGridLines={false}
+                    curveType="natural"
+                    className="h-full"
+                    showAnimation={true}
+                  />
+                </div>
+              </Card>
+            </motion.div>
+
+            {/* Accounts Section */}
+            <motion.div variants={item}>
+              <div className="flex items-center justify-between mb-4">
+                <Title>Your Accounts</Title>
+                <button className="text-sm text-amber-600 hover:text-amber-700 font-medium">
+                  View All
+                </button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                {accounts.map((account) => (
+                  <Card
+                    key={account.id}
+                    className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-lg hover:shadow-lg transition-all duration-200"
+                  >
+                    <div className="flex items-center justify-between mb-6">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
+                          <CreditCardIcon className="w-5 h-5 text-amber-600" />
+                        </div>
+                        <div>
+                          <Text>{account.account_type.toUpperCase()}</Text>
+                          <Text className="text-xs text-gray-500">
+                            •••• {account.account_number.slice(-4)}
+                          </Text>
+                        </div>
+                      </div>
+                      <Badge color={
+                        account.status === 'active' ? 'emerald' :
+                        account.status === 'frozen' ? 'rose' : 'gray'
+                      }>
+                        {account.status}
+                      </Badge>
+                    </div>
+                    <Metric>
+                      {hideBalances ? '••••••' : `${account.currency} ${account.balance.toLocaleString()}`}
+                    </Metric>
+                  </Card>
                 ))}
               </div>
-            </Card>
+            </motion.div>
+
+            {/* Recent Transactions */}
+            <motion.div variants={item}>
+              <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-lg">
+                <div className="flex items-center justify-between mb-6">
+                  <Title>Recent Transactions</Title>
+                  <button className="text-sm text-amber-600 hover:text-amber-700 font-medium">
+                    See All
+                  </button>
+                </div>
+                <div className="divide-y dark:divide-gray-700">
+                  {transactions.slice(0, 5).map((transaction) => (
+                    <div
+                      key={transaction.id}
+                      className="flex items-center justify-between py-4"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className={`p-2 rounded-lg ${
+                          transaction.type === 'deposit' 
+                            ? 'bg-emerald-100 dark:bg-emerald-900/30' 
+                            : 'bg-rose-100 dark:bg-rose-900/30'
+                        }`}>
+                          {transaction.type === 'deposit' ? 
+                            <ArrowUpIcon className="w-5 h-5 text-emerald-600" /> :
+                            <ArrowDownIcon className="w-5 h-5 text-rose-600" />
+                          }
+                        </div>
+                        <div>
+                          <Text>{transaction.description}</Text>
+                          <Text className="text-xs text-gray-500">
+                            {format(new Date(transaction.created_at), 'MMM d, yyyy • h:mm a')}
+                          </Text>
+                        </div>
+                      </div>
+                      <Text className={
+                        transaction.type === 'deposit' 
+                          ? 'text-emerald-600 dark:text-emerald-500' 
+                          : 'text-rose-600 dark:text-rose-500'
+                      }>
+                        {transaction.type === 'deposit' ? '+' : '-'}
+                        ${hideBalances ? '••••' : transaction.amount.toLocaleString()}
+                      </Text>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            </motion.div>
           </motion.div>
         </div>
       </motion.div>

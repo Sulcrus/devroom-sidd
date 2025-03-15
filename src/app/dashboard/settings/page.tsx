@@ -1,272 +1,216 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Card, Title, Text, TextInput, Button, Badge, Select, SelectItem } from "@tremor/react";
-import { User } from "@/types";
+import { useState } from "react";
+import { Card, Title, Text, TextInput, Button, Toggle } from "@tremor/react";
 import { motion } from "framer-motion";
-import { 
-  UserCircleIcon, 
-  KeyIcon, 
-  BellIcon, 
+import useUserStore from "@/store/useUserStore";
+import { useTheme } from "next-themes";
+import {
+  UserCircleIcon,
+  BellIcon,
   ShieldCheckIcon,
-  GlobeAltIcon
+  SunIcon,
+  MoonIcon,
+  EnvelopeIcon,
+  PhoneIcon,
 } from "@heroicons/react/24/outline";
 
-export default function SettingsPage() {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [success, setSuccess] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+const container = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: { staggerChildren: 0.1 }
+  }
+};
 
-  const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-    currentPassword: "",
-    newPassword: "",
-    confirmPassword: "",
-    language: "en",
-    notifications: {
-      email: true,
-      push: true,
-      transactions: true,
-      marketing: false
-    }
+const item = {
+  hidden: { y: 20, opacity: 0 },
+  show: { y: 0, opacity: 1 }
+};
+
+export default function SettingsPage() {
+  const { user } = useUserStore();
+  const { theme, setTheme } = useTheme();
+  const [notifications, setNotifications] = useState({
+    email: true,
+    push: true,
+    marketing: false
   });
 
-  useEffect(() => {
-    fetchUser();
-  }, []);
-
-  const fetchUser = async () => {
-    try {
-      const res = await fetch("/api/user");
-      if (res.ok) {
-        const userData = await res.json();
-        setUser(userData);
-        setFormData(prev => ({
-          ...prev,
-          firstName: userData.first_name,
-          lastName: userData.last_name,
-          email: userData.email,
-        }));
-      }
-    } catch (error) {
-      console.error("Error fetching user:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSaving(true);
-    setError(null);
-    setSuccess(null);
-
-    try {
-      const res = await fetch("/api/user", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error);
-      }
-
-      setSuccess("Settings updated successfully!");
-      fetchUser(); // Refresh user data
-    } catch (error: any) {
-      setError(error.message);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-amber-500" />
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div className="max-w-4xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white">
-            Settings
-          </h1>
-          <Text className="mt-2 text-gray-600 dark:text-gray-400">
-            Manage your account settings and preferences
-          </Text>
-        </div>
+    <div className="p-8 max-w-7xl mx-auto">
+      <motion.div
+        variants={container}
+        initial="hidden"
+        animate="show"
+        className="space-y-6"
+      >
+        {/* Header */}
+        <motion.div variants={item}>
+          <Title>Settings</Title>
+          <Text>Manage your account preferences</Text>
+        </motion.div>
 
-        <div className="space-y-6">
-          {/* Profile Settings */}
-          <Card className="p-6">
-            <div className="flex items-center gap-3 mb-6">
-              <UserCircleIcon className="h-6 w-6 text-amber-500" />
-              <Title>Profile Information</Title>
+        {/* Profile Settings */}
+        <motion.div variants={item}>
+          <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-lg">
+            <div className="flex items-center gap-4 mb-6">
+              <div className="p-3 bg-amber-100 dark:bg-amber-900/30 rounded-xl">
+                <UserCircleIcon className="w-8 h-8 text-amber-600" />
+              </div>
+              <div>
+                <Title>Profile Information</Title>
+                <Text>Update your personal details</Text>
+              </div>
             </div>
 
-            <div className="grid gap-6 md:grid-cols-2">
-              <div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
                 <Text>First Name</Text>
-                <TextInput
-                  value={formData.firstName}
-                  onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
-                  placeholder="First Name"
-                />
+                <TextInput defaultValue={user?.first_name} />
               </div>
-              <div>
+              <div className="space-y-2">
                 <Text>Last Name</Text>
-                <TextInput
-                  value={formData.lastName}
-                  onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
-                  placeholder="Last Name"
-                />
+                <TextInput defaultValue={user?.last_name} />
               </div>
-              <div className="md:col-span-2">
+              <div className="space-y-2">
                 <Text>Email</Text>
-                <TextInput
-                  value={formData.email}
-                  onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                  placeholder="Email"
-                  type="email"
+                <TextInput 
+                  icon={EnvelopeIcon}
+                  defaultValue={user?.email} 
+                />
+              </div>
+              <div className="space-y-2">
+                <Text>Phone</Text>
+                <TextInput 
+                  icon={PhoneIcon}
+                  defaultValue={user?.phone} 
                 />
               </div>
             </div>
-          </Card>
 
-          {/* Security Settings */}
-          <Card className="p-6">
-            <div className="flex items-center gap-3 mb-6">
-              <ShieldCheckIcon className="h-6 w-6 text-amber-500" />
-              <Title>Security</Title>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <Text>Current Password</Text>
-                <TextInput
-                  type="password"
-                  value={formData.currentPassword}
-                  onChange={(e) => setFormData(prev => ({ ...prev, currentPassword: e.target.value }))}
-                  placeholder="Enter current password"
-                />
-              </div>
-              <div>
-                <Text>New Password</Text>
-                <TextInput
-                  type="password"
-                  value={formData.newPassword}
-                  onChange={(e) => setFormData(prev => ({ ...prev, newPassword: e.target.value }))}
-                  placeholder="Enter new password"
-                />
-              </div>
-              <div>
-                <Text>Confirm New Password</Text>
-                <TextInput
-                  type="password"
-                  value={formData.confirmPassword}
-                  onChange={(e) => setFormData(prev => ({ ...prev, confirmPassword: e.target.value }))}
-                  placeholder="Confirm new password"
-                />
-              </div>
-            </div>
-          </Card>
-
-          {/* Notification Settings */}
-          <Card className="p-6">
-            <div className="flex items-center gap-3 mb-6">
-              <BellIcon className="h-6 w-6 text-amber-500" />
-              <Title>Notifications</Title>
-            </div>
-
-            <div className="space-y-4">
-              {Object.entries(formData.notifications).map(([key, value]) => (
-                <div key={key} className="flex items-center justify-between">
-                  <Text className="capitalize">{key} Notifications</Text>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={value}
-                      onChange={(e) => setFormData(prev => ({
-                        ...prev,
-                        notifications: {
-                          ...prev.notifications,
-                          [key]: e.target.checked
-                        }
-                      }))}
-                      className="sr-only peer"
-                    />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-amber-300 dark:peer-focus:ring-amber-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-amber-500"></div>
-                  </label>
-                </div>
-              ))}
-            </div>
-          </Card>
-
-          {/* Language Settings */}
-          <Card className="p-6">
-            <div className="flex items-center gap-3 mb-6">
-              <GlobeAltIcon className="h-6 w-6 text-amber-500" />
-              <Title>Language & Region</Title>
-            </div>
-
-            <div>
-              <Text>Preferred Language</Text>
-              <Select
-                value={formData.language}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, language: value }))}
-              >
-                <SelectItem value="en">English</SelectItem>
-                <SelectItem value="es">Spanish</SelectItem>
-                <SelectItem value="fr">French</SelectItem>
-              </Select>
-            </div>
-          </Card>
-
-          {/* Status Messages */}
-          {error && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="p-4 bg-red-50 border border-red-200 rounded-xl"
-            >
-              <Text className="text-red-600">{error}</Text>
-            </motion.div>
-          )}
-
-          {success && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="p-4 bg-green-50 border border-green-200 rounded-xl"
-            >
-              <Text className="text-green-600">{success}</Text>
-            </motion.div>
-          )}
-
-          {/* Save Button */}
-          <div className="flex justify-end">
-            <Button
-              size="lg"
-              color="amber"
-              loading={saving}
-              onClick={handleSubmit}
-            >
+            <Button color="amber" className="mt-6">
               Save Changes
             </Button>
-          </div>
-        </div>
-      </div>
+          </Card>
+        </motion.div>
+
+        {/* Notifications */}
+        <motion.div variants={item}>
+          <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-lg">
+            <div className="flex items-center gap-4 mb-6">
+              <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
+                <BellIcon className="w-8 h-8 text-blue-600" />
+              </div>
+              <div>
+                <Title>Notifications</Title>
+                <Text>Choose what you want to be notified about</Text>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Text>Email Notifications</Text>
+                  <Text className="text-gray-500">Get updates via email</Text>
+                </div>
+                <Toggle 
+                  checked={notifications.email}
+                  onValueChange={(val) => setNotifications(prev => ({ ...prev, email: val }))}
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <Text>Push Notifications</Text>
+                  <Text className="text-gray-500">Get updates on your device</Text>
+                </div>
+                <Toggle 
+                  checked={notifications.push}
+                  onValueChange={(val) => setNotifications(prev => ({ ...prev, push: val }))}
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <Text>Marketing Emails</Text>
+                  <Text className="text-gray-500">Receive promotional content</Text>
+                </div>
+                <Toggle 
+                  checked={notifications.marketing}
+                  onValueChange={(val) => setNotifications(prev => ({ ...prev, marketing: val }))}
+                />
+              </div>
+            </div>
+          </Card>
+        </motion.div>
+
+        {/* Appearance */}
+        <motion.div variants={item}>
+          <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-xl">
+                  {theme === 'dark' ? (
+                    <MoonIcon className="w-8 h-8 text-purple-600" />
+                  ) : (
+                    <SunIcon className="w-8 h-8 text-purple-600" />
+                  )}
+                </div>
+                <div>
+                  <Title>Theme Preference</Title>
+                  <Text>Choose your preferred theme</Text>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button 
+                  variant={theme === 'light' ? 'primary' : 'secondary'}
+                  color="amber"
+                  onClick={() => setTheme('light')}
+                  icon={SunIcon}
+                >
+                  Light
+                </Button>
+                <Button 
+                  variant={theme === 'dark' ? 'primary' : 'secondary'}
+                  color="amber"
+                  onClick={() => setTheme('dark')}
+                  icon={MoonIcon}
+                >
+                  Dark
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </motion.div>
+
+        {/* Security */}
+        <motion.div variants={item}>
+          <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-lg">
+            <div className="flex items-center gap-4 mb-6">
+              <div className="p-3 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl">
+                <ShieldCheckIcon className="w-8 h-8 text-emerald-600" />
+              </div>
+              <div>
+                <Title>Security</Title>
+                <Text>Manage your security preferences</Text>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <Button color="amber" variant="secondary" className="w-full">
+                Change Password
+              </Button>
+              <Button color="amber" variant="secondary" className="w-full">
+                Two-Factor Authentication
+              </Button>
+              <Button color="amber" variant="secondary" className="w-full">
+                Login History
+              </Button>
+            </div>
+          </Card>
+        </motion.div>
+      </motion.div>
     </div>
   );
 } 
