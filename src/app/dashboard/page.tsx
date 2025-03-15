@@ -212,10 +212,15 @@ export default function DashboardPage() {
         const accountsData = await accountsRes.json();
         setAccounts(accountsData);
         
-        // Generate other data
-        setSpendingData(generateSpendingData());
-        setTransactions(generateTransactions());
-        setNotifications(generateNotifications());
+        // Fetch recent transactions
+        const transactionsRes = await fetch("/api/transactions?limit=5");
+        const transactionsData = await transactionsRes.json();
+        setTransactions(transactionsData);
+
+        // Fetch spending analytics
+        const analyticsRes = await fetch("/api/analytics/spending");
+        const analyticsData = await analyticsRes.json();
+        setSpendingData(analyticsData);
       } catch (error) {
         toast.error("Failed to load dashboard data");
         console.error(error);
@@ -226,6 +231,14 @@ export default function DashboardPage() {
     
     fetchData();
   }, []);
+
+  const totalBalance = accounts.reduce((sum, acc) => sum + acc.balance, 0);
+  const totalIncome = transactions
+    .filter(t => t.type === 'deposit')
+    .reduce((sum, t) => sum + t.amount, 0);
+  const totalSpending = transactions
+    .filter(t => t.type === 'withdrawal')
+    .reduce((sum, t) => sum + t.amount, 0);
 
   return (
     <AnimatePresence>
@@ -268,7 +281,7 @@ export default function DashboardPage() {
                     <div>
                       <Text className="text-white/80">Total Balance</Text>
                       <Metric className="text-white">
-                        {hideBalances ? '••••••' : `$${accounts.reduce((sum, account) => sum + account.balance, 0).toLocaleString()}`}
+                        {hideBalances ? '••••••' : `$${totalBalance.toLocaleString()}`}
                       </Metric>
                     </div>
                   </div>
@@ -280,7 +293,7 @@ export default function DashboardPage() {
                         <Text className="text-white/80">Income</Text>
                       </div>
                       <Metric className="text-white text-xl">
-                        {hideBalances ? '••••' : `$${(Math.random() * 5000 + 3000).toFixed(2)}`}
+                        {hideBalances ? '••••' : `$${totalIncome.toLocaleString()}`}
                       </Metric>
                     </div>
                     
@@ -290,7 +303,7 @@ export default function DashboardPage() {
                         <Text className="text-white/80">Spending</Text>
                       </div>
                       <Metric className="text-white text-xl">
-                        {hideBalances ? '••••' : `$${(Math.random() * 2000 + 1000).toFixed(2)}`}
+                        {hideBalances ? '••••' : `$${totalSpending.toLocaleString()}`}
                       </Metric>
                     </div>
                   </div>
@@ -332,9 +345,9 @@ export default function DashboardPage() {
                       className="h-72 mt-4"
                       data={spendingData}
                       index="date"
-                      categories={["Groceries", "Dining", "Shopping", "Transport", "Utilities", "Entertainment"]}
-                      colors={["emerald", "amber", "rose", "blue", "purple", "indigo"]}
-                      valueFormatter={(value) => `$${value}`}
+                      categories={["amount"]}
+                      colors={["amber"]}
+                      valueFormatter={(value) => `$${value.toLocaleString()}`}
                       showAnimation={true}
                     />
                   </Card>
