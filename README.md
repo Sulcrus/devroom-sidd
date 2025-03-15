@@ -277,7 +277,6 @@ siddharthabank/
   <div align="center">
     <h3>Special Thanks</h3>
     <p><em>With appreciation to the technologies that made this project possible</em></p>
-
     <a href="https://nextjs.org/" target="_blank" rel="noopener noreferrer">
       <img src="https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=next.js&logoColor=white" alt="Next.js" height="30" />
     </a>
