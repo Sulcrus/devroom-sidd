@@ -23,6 +23,7 @@ import { User, Account, Transaction, Statistics } from "@/types";
 import { motion, AnimatePresence } from "framer-motion";
 import useUserStore from "@/store/useUserStore";
 import { toast } from "sonner";
+import { ArrowUpIcon, ArrowDownIcon, CreditCardIcon, BanknotesIcon } from "@heroicons/react/24/outline";
 
 ChartJS.register(
   CategoryScale,
@@ -209,153 +210,197 @@ export default function DashboardPage() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="min-h-screen bg-gray-50 dark:bg-gray-900"
+        className="min-h-screen bg-gradient-to-b from-amber-50 to-white dark:from-gray-900 dark:to-gray-800"
       >
-        <div className="p-6 space-y-8">
+        <div className="max-w-7xl mx-auto p-6 space-y-8">
+          {/* Header Section */}
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                Welcome back, {user?.first_name || 'User'}!
+            <motion.div
+              initial={{ x: -20, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+            >
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+                Welcome back, {user?.first_name || 'User'}! 👋
               </h1>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Here's your financial overview
+              <p className="text-gray-600 dark:text-gray-400 mt-1">
+                Here's your financial summary for today
               </p>
-            </div>
+            </motion.div>
             <button
               onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800"
+              className="p-3 rounded-xl bg-white dark:bg-gray-800 shadow-lg hover:shadow-xl transition-all duration-200"
             >
               {theme === 'dark' ? '🌞' : '🌙'}
             </button>
           </div>
 
+          {/* Stats Overview */}
           <div className="grid gap-6 md:grid-cols-3">
-            <Card className="dark:bg-gray-800">
-              <Text>Total Balance</Text>
-              <Metric className="text-amber-600">
-                ${statistics?.totalBalance.toLocaleString()}
-              </Metric>
-              <Text className="text-sm text-gray-500">
-                Across all accounts
-              </Text>
-            </Card>
-            
-            <Card className="dark:bg-gray-800">
-              <Text>Monthly Income</Text>
-              <Metric className="text-green-600">
-                ${statistics?.monthlyIncome.toLocaleString()}
-              </Metric>
-              <Text className="text-sm text-gray-500">
-                Last 30 days
-              </Text>
-            </Card>
-            
-            <Card className="dark:bg-gray-800">
-              <Text>Monthly Spending</Text>
-              <Metric className="text-red-600">
-                ${statistics?.monthlySpending.toLocaleString()}
-              </Metric>
-              <Text className="text-sm text-gray-500">
-                Last 30 days
-              </Text>
-            </Card>
-          </div>
-
-          <div className="grid gap-6 md:grid-cols-2">
-            <Card className="dark:bg-gray-800">
-              <Title>Income vs Spending</Title>
-              <AreaChart
-                data={statistics?.transactionStats || []}
-                index="date"
-                categories={["income", "spending"]}
-                colors={["emerald", "rose"]}
-                valueFormatter={(value) => `$${value.toLocaleString()}`}
-                showLegend
-                className="h-72"
-              />
-            </Card>
-
-            <Card className="dark:bg-gray-800">
-              <Title>Spending by Category</Title>
-              <DonutChart
-                data={statistics?.spendingByCategory || []}
-                category="amount"
-                index="category"
-                valueFormatter={(value) => `$${value.toLocaleString()}`}
-                colors={statistics?.spendingByCategory?.map(cat => cat.color) || []}
-                className="h-72"
-              />
-            </Card>
-          </div>
-
-          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-            {accounts.map((account) => (
-              <Card
-                key={account.id}
-                className="dark:bg-gray-800 hover:shadow-lg transition-shadow"
-              >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Text>{account.account_type.toUpperCase()}</Text>
-                    <Text className="text-xs text-gray-500">
-                      {account.account_number}
-                    </Text>
+            <motion.div
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.1 }}
+            >
+              <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-lg border border-amber-100/20 hover:shadow-lg transition-all duration-200">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-amber-100 dark:bg-amber-900/30 rounded-xl">
+                    <BanknotesIcon className="w-6 h-6 text-amber-600 dark:text-amber-500" />
                   </div>
-                  <div className={`px-2 py-1 rounded text-xs ${
-                    account.status === 'active' ? 'bg-green-100 text-green-800' :
-                    account.status === 'frozen' ? 'bg-red-100 text-red-800' :
-                    'bg-gray-100 text-gray-800'
-                  }`}>
-                    {account.status}
+                  <div>
+                    <Text>Total Balance</Text>
+                    <Metric className="text-amber-600 dark:text-amber-500">
+                      ${statistics?.totalBalance.toLocaleString()}
+                    </Metric>
                   </div>
                 </div>
-                <Metric className="mt-4">
-                  {account.currency} {account.balance.toLocaleString()}
-                </Metric>
               </Card>
-            ))}
+            </motion.div>
+
+            <motion.div
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.2 }}
+            >
+              <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-lg border border-green-100/20">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-xl">
+                    <ArrowUpIcon className="w-6 h-6 text-green-600 dark:text-green-500" />
+                  </div>
+                  <div>
+                    <Text>Monthly Income</Text>
+                    <Metric className="text-green-600 dark:text-green-500">
+                      ${statistics?.monthlyIncome.toLocaleString()}
+                    </Metric>
+                  </div>
+                </div>
+              </Card>
+            </motion.div>
+
+            <motion.div
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.3 }}
+            >
+              <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-lg border border-red-100/20">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-xl">
+                    <ArrowDownIcon className="w-6 h-6 text-red-600 dark:text-red-500" />
+                  </div>
+                  <div>
+                    <Text>Monthly Spending</Text>
+                    <Metric className="text-red-600 dark:text-red-500">
+                      ${statistics?.monthlySpending.toLocaleString()}
+                    </Metric>
+                  </div>
+                </div>
+              </Card>
+            </motion.div>
           </div>
 
-          <Card className="dark:bg-gray-800">
-            <Title>Recent Transactions</Title>
-            <div className="divide-y dark:divide-gray-700">
-              {transactions.map((transaction) => (
-                <div
-                  key={transaction.id}
-                  className="flex items-center justify-between py-4"
+          {/* Chart Section */}
+          <motion.div
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.4 }}
+          >
+            <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-lg border border-gray-100/20">
+              <Title>Income vs Spending Trends</Title>
+              <div className="h-[400px] mt-4">
+                <AreaChart
+                  data={statistics?.transactionStats || []}
+                  index="date"
+                  categories={["income", "spending"]}
+                  colors={["emerald", "rose"]}
+                  valueFormatter={(value) => `$${value.toLocaleString()}`}
+                  showLegend
+                  showGridLines={false}
+                  curveType="natural"
+                  className="h-full"
+                />
+              </div>
+            </Card>
+          </motion.div>
+
+          {/* Accounts Section */}
+          <motion.div
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.5 }}
+          >
+            <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+              {accounts.map((account, index) => (
+                <Card
+                  key={account.id}
+                  className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-lg border border-gray-100/20 hover:shadow-lg transition-all duration-200"
                 >
-                  <div className="flex items-center space-x-4">
-                    <div
-                      className="w-10 h-10 rounded-full flex items-center justify-center"
-                      style={{ backgroundColor: transaction.category_color + '20', color: transaction.category_color }}
-                    >
-                      <span className="text-lg">{transaction.category_icon}</span>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
+                        <CreditCardIcon className="w-5 h-5 text-amber-600 dark:text-amber-500" />
+                      </div>
+                      <div>
+                        <Text>{account.account_type.toUpperCase()}</Text>
+                        <Text className="text-xs text-gray-500">
+                          •••• {account.account_number.slice(-4)}
+                        </Text>
+                      </div>
                     </div>
-                    <div>
-                      <Text>{transaction.description}</Text>
-                      <Text className="text-xs text-gray-500">
-                        {new Date(transaction.created_at).toLocaleDateString()} • 
-                        {transaction.reference_number}
-                      </Text>
-                    </div>
+                    <Badge color={
+                      account.status === 'active' ? 'green' :
+                      account.status === 'frozen' ? 'red' : 'gray'
+                    }>
+                      {account.status}
+                    </Badge>
                   </div>
-                  <div className="text-right">
+                  <Metric className="mt-4">
+                    {account.currency} {account.balance.toLocaleString()}
+                  </Metric>
+                </Card>
+              ))}
+            </div>
+          </motion.div>
+
+          {/* Recent Transactions */}
+          <motion.div
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.6 }}
+          >
+            <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-lg border border-gray-100/20">
+              <Title>Recent Transactions</Title>
+              <div className="divide-y dark:divide-gray-700">
+                {transactions.map((transaction) => (
+                  <div
+                    key={transaction.id}
+                    className="flex items-center justify-between py-4"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className={`p-2 rounded-lg ${
+                        transaction.type === 'deposit' ? 'bg-green-100 dark:bg-green-900/30' : 'bg-red-100 dark:bg-red-900/30'
+                      }`}>
+                        {transaction.type === 'deposit' ? 
+                          <ArrowUpIcon className="w-5 h-5 text-green-600 dark:text-green-500" /> :
+                          <ArrowDownIcon className="w-5 h-5 text-red-600 dark:text-red-500" />
+                        }
+                      </div>
+                      <div>
+                        <Text>{transaction.description}</Text>
+                        <Text className="text-xs text-gray-500">
+                          {format(new Date(transaction.created_at), 'MMM d, yyyy')}
+                        </Text>
+                      </div>
+                    </div>
                     <Text className={
-                      transaction.type === 'deposit' ? 'text-green-600' :
-                      transaction.type === 'withdrawal' ? 'text-red-600' :
-                      'text-gray-600'
+                      transaction.type === 'deposit' ? 'text-green-600 dark:text-green-500' : 'text-red-600 dark:text-red-500'
                     }>
                       {transaction.type === 'deposit' ? '+' : '-'}
                       ${transaction.amount.toLocaleString()}
                     </Text>
-                    <Text className="text-xs text-gray-500">
-                      {transaction.category_name}
-                    </Text>
                   </div>
-                </div>
-              ))}
-            </div>
-          </Card>
+                ))}
+              </div>
+            </Card>
+          </motion.div>
         </div>
       </motion.div>
     </AnimatePresence>
