@@ -7,6 +7,7 @@ import { Account, User, Transaction } from "@/types";
 import { motion } from "framer-motion";
 import { ArrowRightIcon, UserCircleIcon, CreditCardIcon, BanknotesIcon, ArrowUpIcon, ArrowDownIcon, ClockIcon } from "@heroicons/react/24/outline";
 import { format } from "date-fns";
+import { toast } from "sonner";
 
 export default function TransferPage() {
   const router = useRouter();
@@ -21,7 +22,7 @@ export default function TransferPage() {
 
   const [formData, setFormData] = useState({
     fromAccountId: "",
-    toUsername: "",
+    toAccountId: "",
     amount: "",
     description: "",
   });
@@ -71,40 +72,54 @@ export default function TransferPage() {
     setSelectedAccount(account || null);
   }, [formData.fromAccountId, accounts]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleTransfer = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
-    setSuccess(null);
     setSubmitting(true);
 
     try {
-      const response = await fetch("/api/transfers", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const response = await fetch('/api/transfers', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify({
-          ...formData,
+          fromAccountId: formData.fromAccountId,
+          toAccountId: formData.toAccountId,
           amount: parseFloat(formData.amount),
-        }),
+          description: formData.description
+        })
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || "Transfer failed");
+        throw new Error(data.error || 'Transfer failed');
       }
 
-      setSuccess(`Transfer successful! Money sent to ${data.recipientName}. Reference: ${data.referenceNumber}`);
-      setFormData({
-        fromAccountId: "",
-        toUsername: "",
-        amount: "",
-        description: "",
+      toast.success('Transfer successful!', {
+        description: `Reference number: ${data.referenceNumber}`,
+        duration: 5000
       });
 
-      // Refresh accounts to show updated balances
-      fetchAccounts();
-    } catch (error: any) {
-      setError(error.message);
+      // Reset form
+      setFormData({
+        fromAccountId: '',
+        toAccountId: '',
+        amount: '',
+        description: ''
+      });
+
+      // Refresh data
+      await Promise.all([
+        fetchAccounts(),
+        fetchRecentTransactions()
+      ]);
+
+    } catch (error) {
+      console.error('Transfer error:', error);
+      toast.error(error instanceof Error ? error.message : 'Transfer failed', {
+        duration: 5000
+      });
     } finally {
       setSubmitting(false);
     }
@@ -151,7 +166,7 @@ export default function TransferPage() {
           {/* Left Column - Transfer Form */}
           <div className="lg:col-span-7 space-y-6">
             <Card className="p-8 shadow-lg">
-              <form onSubmit={handleSubmit} className="space-y-8">
+              <form onSubmit={handleTransfer} className="space-y-8">
                 {/* From Account Section */}
                 <div className="space-y-4">
                   <div className="flex items-center gap-2">
@@ -180,21 +195,15 @@ export default function TransferPage() {
                 {/* Recipient Section */}
                 <div className="space-y-4">
                   <div className="flex items-center gap-2">
-                    <UserCircleIcon className="h-5 w-5 text-amber-500" />
-                    <Title>To User</Title>
+                    <CreditCardIcon className="h-5 w-5 text-amber-500" />
+                    <Title>To Account</Title>
                   </div>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <span className="text-gray-500">@</span>
-                    </div>
-                    <TextInput
-                      placeholder="Enter recipient's username"
-                      value={formData.toUsername}
-                      onChange={(e) => setFormData(prev => ({ ...prev, toUsername: e.target.value }))}
-                      required
-                      className="pl-8"
-                    />
-                  </div>
+                  <TextInput
+                    placeholder="Enter account number"
+                    value={formData.toAccountId}
+                    onChange={(e) => setFormData(prev => ({ ...prev, toAccountId: e.target.value }))}
+                    required
+                  />
                 </div>
 
                 {/* Amount Section */}
@@ -241,8 +250,7 @@ export default function TransferPage() {
                     "Processing..."
                   ) : (
                     <span className="flex items-center justify-center gap-2">
-                      Send Money
-                      <ArrowRightIcon className="h-5 w-5" />
+                      Transfer
                     </span>
                   )}
                 </Button>

@@ -8,29 +8,17 @@ import { RowDataPacket } from "mysql2";
 interface AccountRow extends RowDataPacket {
   id: string;
   user_id: string;
+  account_number: string;
   balance: number;
   currency: string;
   status: string;
 }
 
-interface TransferRow extends RowDataPacket {
+interface UserRow extends RowDataPacket {
   id: string;
-  reference_number: string;
-  from_account_id: string;
-  to_account_id: string;
-  amount: number;
-  status: 'pending' | 'completed' | 'failed';
-  created_at: Date;
-}
-
-async function createNotification(userId: string, title: string, message: string, type: 'success' | 'warning' | 'error' | 'info') {
-  await query({
-    query: `
-      INSERT INTO notifications (id, user_id, title, message, type)
-      VALUES (?, ?, ?, ?, ?)
-    `,
-    values: [uuidv4(), userId, title, message, type],
-  });
+  username: string;
+  first_name: string;
+  last_name: string;
 }
 
 export async function POST(req: NextRequest) {
@@ -44,148 +32,176 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { fromAccountId, toAccountId, amount, description } = await req.json();
+    const body = await req.json();
+    console.log('Received transfer request:', body);
+
+    const { fromAccountId, toAccountId: recipientUsername, amount, description } = body;
 
     // Validate input
-    if (!fromAccountId || !toAccountId || !amount) {
+    if (!fromAccountId) {
       return NextResponse.json(
-        { error: "Missing required fields" },
+        { error: "Source account is required" },
         { status: 400 }
       );
     }
 
-    if (fromAccountId === toAccountId) {
+    if (!recipientUsername) {
       return NextResponse.json(
-        { error: "Cannot transfer to same account" },
+        { error: "Recipient username is required" },
+        { status: 400 }
+      );
+    }
+
+    if (!amount || amount <= 0) {
+      return NextResponse.json(
+        { error: "Valid amount is required" },
         { status: 400 }
       );
     }
 
     try {
-      // Start transaction
-      await query({ query: "START TRANSACTION" });
+      // First, find the recipient user
+      const [recipientUser] = await query({
+        query: "SELECT * FROM users WHERE username = ?",
+        values: [recipientUsername],
+      }) as UserRow[];
 
-      // Get source account and verify balance
-      const [fromAccount] = await query({
-        query: `
-          SELECT id, balance, currency, status 
-          FROM accounts 
-          WHERE id = ? AND user_id = ? AND status = 'active'
-          FOR UPDATE
-        `,
-        values: [fromAccountId, user.id],
-      }) as AccountRow[];
-
-      if (!fromAccount) {
-        throw new Error("Source account not found or inactive");
-      }
-
-      if (fromAccount.balance < amount) {
-        throw new Error("Insufficient funds");
-      }
-
-      // Get destination account
-      const [toAccount] = await query({
-        query: `
-          SELECT id, currency, status 
-          FROM accounts 
-          WHERE id = ? AND status = 'active'
-          FOR UPDATE
-        `,
-        values: [toAccountId],
-      }) as AccountRow[];
-
-      if (!toAccount) {
-        throw new Error("Destination account not found or inactive");
-      }
-
-      // Generate reference number
-      const referenceNumber = generateReferenceNumber();
-      const transferId = uuidv4();
-
-      // Create transfer record
-      await query({
-        query: `
-          INSERT INTO transfers (
-            id,
-            reference_number,
-            from_account_id,
-            to_account_id,
-            amount,
-            description,
-            status
-          ) VALUES (?, ?, ?, ?, ?, ?, 'completed')
-        `,
-        values: [
-          transferId,
-          referenceNumber,
-          fromAccountId,
-          toAccountId,
-          amount,
-          description || 'Transfer',
-        ],
-      });
-
-      // Update account balances
-      await query({
-        query: `
-          UPDATE accounts 
-          SET balance = balance - ?,
-              updated_at = CURRENT_TIMESTAMP
-          WHERE id = ?
-        `,
-        values: [amount, fromAccountId],
-      });
-
-      await query({
-        query: `
-          UPDATE accounts 
-          SET balance = balance + ?,
-              updated_at = CURRENT_TIMESTAMP
-          WHERE id = ?
-        `,
-        values: [amount, toAccountId],
-      });
-
-      // Create notifications for both parties
-      await createNotification(
-        user.id,
-        'Transfer Sent',
-        `You sent ${fromAccount.currency} ${amount.toLocaleString()} to account ending in ${toAccountId.slice(-4)}`,
-        'success'
-      );
-
-      const [toAccountOwner] = await query({
-        query: "SELECT user_id FROM accounts WHERE id = ?",
-        values: [toAccountId],
-      }) as AccountRow[];
-
-      if (toAccountOwner && toAccountOwner.user_id !== user.id) {
-        await createNotification(
-          toAccountOwner.user_id,
-          'Transfer Received',
-          `You received ${toAccount.currency} ${amount.toLocaleString()} from account ending in ${fromAccountId.slice(-4)}`,
-          'success'
+      if (!recipientUser) {
+        return NextResponse.json(
+          { error: "Recipient not found" },
+          { status: 404 }
         );
       }
 
-      // Commit transaction
-      await query({ query: "COMMIT" });
+      if (recipientUser.id === user.id) {
+        return NextResponse.json(
+          { error: "Cannot transfer to yourself" },
+          { status: 400 }
+        );
+      }
+
+      // Find recipient's primary account
+      const [recipientAccount] = await query({
+        query: `
+          SELECT * FROM accounts 
+          WHERE user_id = ? AND status = 'active'
+          ORDER BY created_at ASC 
+          LIMIT 1
+        `,
+        values: [recipientUser.id],
+      }) as AccountRow[];
+
+      if (!recipientAccount) {
+        return NextResponse.json(
+          { error: "Recipient has no active account" },
+          { status: 404 }
+        );
+      }
+
+      // Get sender's account
+      const [senderAccount] = await query({
+        query: "SELECT * FROM accounts WHERE id = ? AND user_id = ? AND status = 'active'",
+        values: [fromAccountId, user.id],
+      }) as AccountRow[];
+
+      if (!senderAccount) {
+        return NextResponse.json(
+          { error: "Source account not found or inactive" },
+          { status: 404 }
+        );
+      }
+
+      if (senderAccount.balance < amount) {
+        return NextResponse.json(
+          { error: "Insufficient funds" },
+          { status: 400 }
+        );
+      }
+
+      // Generate transaction reference
+      const referenceNumber = generateReferenceNumber();
+
+      // Create transaction record
+      await query({
+        query: `
+          INSERT INTO transactions (
+            id,
+            from_account_id,
+            to_account_id,
+            amount,
+            type,
+            status,
+            description,
+            reference_number,
+            created_at
+          ) VALUES (?, ?, ?, ?, 'transfer', 'completed', ?, ?, CURRENT_TIMESTAMP)
+        `,
+        values: [
+          uuidv4(),
+          senderAccount.id,
+          recipientAccount.id,
+          amount,
+          description || 'Transfer',
+          referenceNumber
+        ],
+      });
+
+      // Update sender's balance
+      await query({
+        query: "UPDATE accounts SET balance = balance - ? WHERE id = ?",
+        values: [amount, senderAccount.id],
+      });
+
+      // Update recipient's balance
+      await query({
+        query: "UPDATE accounts SET balance = balance + ? WHERE id = ?",
+        values: [amount, recipientAccount.id],
+      });
+
+      // Create notifications
+      await query({
+        query: `
+          INSERT INTO notifications (
+            id, 
+            user_id, 
+            title, 
+            message, 
+            type, 
+            is_read,
+            created_at
+          )
+          VALUES 
+            (?, ?, 'Transfer Sent', ?, 'success', 0, CURRENT_TIMESTAMP),
+            (?, ?, 'Transfer Received', ?, 'success', 0, CURRENT_TIMESTAMP)
+        `,
+        values: [
+          uuidv4(),
+          user.id,
+          `You sent ${senderAccount.currency} ${amount.toLocaleString()} to @${recipientUser.username}`,
+          uuidv4(),
+          recipientUser.id,
+          `You received ${recipientAccount.currency} ${amount.toLocaleString()} from @${user.username}`
+        ],
+      });
 
       return NextResponse.json({
         message: "Transfer successful",
         referenceNumber,
+        recipientName: `${recipientUser.first_name} ${recipientUser.last_name}`
       });
-    } catch (error: any) {
-      // Rollback on error
-      await query({ query: "ROLLBACK" });
-      throw error;
+
+    } catch (error) {
+      console.error("Transfer error:", error);
+      return NextResponse.json(
+        { error: "Transfer failed. Please try again." },
+        { status: 500 }
+      );
     }
-  } catch (error: any) {
+  } catch (error) {
     console.error("Transfer error:", error);
     return NextResponse.json(
-      { error: error.message || "Transfer failed" },
-      { status: 400 }
+      { error: "Internal server error" },
+      { status: 500 }
     );
   }
 } 

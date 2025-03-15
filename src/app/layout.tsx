@@ -3,6 +3,7 @@ import { GeistSans } from "geist/font";
 import "./globals.css";
 import { ThemeProvider } from "@/providers/ThemeProvider";
 import { ThemeScript } from "@/components/ThemeScript";
+import { Toaster } from "sonner";
 
 export const metadata: Metadata = {
   title: "Siddhartha Bank - BankSmartXP",
@@ -26,6 +27,12 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
+          <Toaster 
+            richColors 
+            position="top-right"
+            theme="system"
+            closeButton
+          />
           {children}
         </ThemeProvider>
       </body>
