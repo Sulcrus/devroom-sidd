@@ -1,8 +1,27 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { query } from "@/lib/mysql";
 import { getAuthUser } from "@/lib/auth";
 import { v4 as uuidv4 } from "uuid";
 import { generateReferenceNumber } from "@/lib/utils";
+import { RowDataPacket } from "mysql2";
+
+interface AccountRow extends RowDataPacket {
+  id: string;
+  user_id: string;
+  balance: number;
+  currency: string;
+  status: string;
+}
+
+interface TransferRow extends RowDataPacket {
+  id: string;
+  reference_number: string;
+  from_account_id: string;
+  to_account_id: string;
+  amount: number;
+  status: 'pending' | 'completed' | 'failed';
+  created_at: Date;
+}
 
 async function createNotification(userId: string, title: string, message: string, type: 'success' | 'warning' | 'error' | 'info') {
   await query({
@@ -14,169 +33,159 @@ async function createNotification(userId: string, title: string, message: string
   });
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     
     if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
     }
 
-    const { fromAccountId, toUsername, amount, description } = await req.json();
+    const { fromAccountId, toAccountId, amount, description } = await req.json();
 
-    // Validate amount
-    if (!amount || amount <= 0) {
+    // Validate input
+    if (!fromAccountId || !toAccountId || !amount) {
       return NextResponse.json(
-        { error: "Invalid transfer amount" },
+        { error: "Missing required fields" },
         { status: 400 }
       );
     }
 
-    // Start transaction
-    await query({ query: "START TRANSACTION" });
+    if (fromAccountId === toAccountId) {
+      return NextResponse.json(
+        { error: "Cannot transfer to same account" },
+        { status: 400 }
+      );
+    }
 
     try {
-      // Check if source account exists and belongs to user
+      // Start transaction
+      await query({ query: "START TRANSACTION" });
+
+      // Get source account and verify balance
       const [fromAccount] = await query({
         query: `
-          SELECT id, balance, status, currency
+          SELECT id, balance, currency, status 
           FROM accounts 
           WHERE id = ? AND user_id = ? AND status = 'active'
+          FOR UPDATE
         `,
         values: [fromAccountId, user.id],
-      });
+      }) as AccountRow[];
 
       if (!fromAccount) {
         throw new Error("Source account not found or inactive");
       }
 
-      // Find recipient's default account by username
-      const [recipientAccount] = await query({
-        query: `
-          SELECT a.id, a.status, a.currency, u.username, u.first_name, u.last_name
-          FROM accounts a
-          JOIN users u ON a.user_id = u.id
-          WHERE u.username = ? 
-          AND a.status = 'active'
-          AND a.account_type = 'savings'
-          LIMIT 1
-        `,
-        values: [toUsername],
-      });
-
-      if (!recipientAccount) {
-        throw new Error("Recipient not found or has no active account");
-      }
-
-      if (fromAccount.id === recipientAccount.id) {
-        throw new Error("Cannot transfer to the same account");
-      }
-
-      // Check sufficient balance
       if (fromAccount.balance < amount) {
-        throw new Error("Insufficient balance");
+        throw new Error("Insufficient funds");
       }
 
-      const transactionId = uuidv4();
+      // Get destination account
+      const [toAccount] = await query({
+        query: `
+          SELECT id, currency, status 
+          FROM accounts 
+          WHERE id = ? AND status = 'active'
+          FOR UPDATE
+        `,
+        values: [toAccountId],
+      }) as AccountRow[];
+
+      if (!toAccount) {
+        throw new Error("Destination account not found or inactive");
+      }
+
+      // Generate reference number
       const referenceNumber = generateReferenceNumber();
+      const transferId = uuidv4();
 
-      // Update balances
-      await query({
-        query: "UPDATE accounts SET balance = balance - ? WHERE id = ?",
-        values: [amount, fromAccount.id],
-      });
-
-      await query({
-        query: "UPDATE accounts SET balance = balance + ? WHERE id = ?",
-        values: [amount, recipientAccount.id],
-      });
-
-      // Record transaction
+      // Create transfer record
       await query({
         query: `
-          INSERT INTO transactions (
-            id, from_account_id, to_account_id, amount, 
-            type, status, description, reference_number,
-            category_id
-          ) VALUES (?, ?, ?, ?, 'transfer', 'completed', ?, ?, 
-            (SELECT id FROM transaction_categories WHERE name = 'Transfer')
-          )
+          INSERT INTO transfers (
+            id,
+            reference_number,
+            from_account_id,
+            to_account_id,
+            amount,
+            description,
+            status
+          ) VALUES (?, ?, ?, ?, ?, ?, 'completed')
         `,
         values: [
-          transactionId,
-          fromAccount.id,
-          recipientAccount.id,
-          amount,
-          description,
+          transferId,
           referenceNumber,
+          fromAccountId,
+          toAccountId,
+          amount,
+          description || 'Transfer',
         ],
       });
 
-      // Update monthly statistics for sender (spending)
+      // Update account balances
       await query({
         query: `
-          INSERT INTO monthly_statistics (
-            user_id, 
-            type, 
-            amount, 
-            month, 
-            year
-          ) VALUES (?, 'spending', ?, MONTH(CURRENT_DATE()), YEAR(CURRENT_DATE()))
-          ON DUPLICATE KEY UPDATE amount = amount + ?
+          UPDATE accounts 
+          SET balance = balance - ?,
+              updated_at = CURRENT_TIMESTAMP
+          WHERE id = ?
         `,
-        values: [user.id, amount, amount],
+        values: [amount, fromAccountId],
       });
 
-      // Update monthly statistics for recipient (income)
       await query({
         query: `
-          INSERT INTO monthly_statistics (
-            user_id, 
-            type, 
-            amount, 
-            month, 
-            year
-          ) VALUES (?, 'income', ?, MONTH(CURRENT_DATE()), YEAR(CURRENT_DATE()))
-          ON DUPLICATE KEY UPDATE amount = amount + ?
+          UPDATE accounts 
+          SET balance = balance + ?,
+              updated_at = CURRENT_TIMESTAMP
+          WHERE id = ?
         `,
-        values: [recipientAccount.user_id, amount, amount],
+        values: [amount, toAccountId],
       });
 
-      // Create notifications
+      // Create notifications for both parties
       await createNotification(
         user.id,
-        'Money Sent',
-        `You sent ${fromAccount.currency} ${amount.toLocaleString()} to ${recipientAccount.first_name} ${recipientAccount.last_name}`,
+        'Transfer Sent',
+        `You sent ${fromAccount.currency} ${amount.toLocaleString()} to account ending in ${toAccountId.slice(-4)}`,
         'success'
       );
 
-      await createNotification(
-        recipientAccount.user_id,
-        'Money Received',
-        `You received ${fromAccount.currency} ${amount.toLocaleString()} from ${user.first_name} ${user.last_name}`,
-        'success'
-      );
+      const [toAccountOwner] = await query({
+        query: "SELECT user_id FROM accounts WHERE id = ?",
+        values: [toAccountId],
+      }) as AccountRow[];
 
+      if (toAccountOwner && toAccountOwner.user_id !== user.id) {
+        await createNotification(
+          toAccountOwner.user_id,
+          'Transfer Received',
+          `You received ${toAccount.currency} ${amount.toLocaleString()} from account ending in ${fromAccountId.slice(-4)}`,
+          'success'
+        );
+      }
+
+      // Commit transaction
       await query({ query: "COMMIT" });
 
       return NextResponse.json({
         message: "Transfer successful",
         referenceNumber,
-        recipientName: `${recipientAccount.first_name} ${recipientAccount.last_name}`,
       });
     } catch (error: any) {
+      // Rollback on error
       await query({ query: "ROLLBACK" });
-      
-      return NextResponse.json(
-        { error: error.message },
-        { status: 400 }
-      );
+      throw error;
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Transfer error:", error);
     return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
+      { error: error.message || "Transfer failed" },
+      { status: 400 }
     );
   }
 } 
