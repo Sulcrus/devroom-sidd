@@ -19,7 +19,7 @@ import { format, parseISO, subDays } from 'date-fns';
 import { Card, Metric, Text, Flex, ProgressBar, Title, TextInput, Button, Select, SelectItem, Badge, Grid, Col } from "@tremor/react";
 import { useTheme } from "next-themes";
 import { AreaChart, DonutChart } from "@tremor/react";
-import { User, Account, Transaction, Statistics } from "@/types";
+import { User, Account, Transaction } from "@/types";
 import { motion, AnimatePresence } from "framer-motion";
 import useUserStore from "@/store/useUserStore";
 import { toast } from "sonner";
@@ -52,17 +52,55 @@ const item = {
   show: { y: 0, opacity: 1 }
 };
 
+// Define types for our custom data structures
+interface SpendingDataItem {
+  date: string;
+  total: number;
+  Groceries: number;
+  Dining: number;
+  Shopping: number;
+  Transport: number;
+  Utilities: number;
+  Entertainment: number;
+  [key: string]: number | string; // Index signature to allow dynamic category access
+}
+
+interface CustomTransaction {
+  id: string;
+  merchant: string;
+  category: string;
+  icon: string;
+  amount: number;
+  date: Date;
+  type: 'debit' | 'credit';
+}
+
+interface Notification {
+  id: string;
+  title: string;
+  description: string;
+  time: string;
+  read: boolean;
+  type: 'alert' | 'info' | 'security';
+}
+
 // Generate realistic spending data
-const generateSpendingData = () => {
-  const data = [];
+const generateSpendingData = (): SpendingDataItem[] => {
+  const data: SpendingDataItem[] = [];
   const categories = ["Groceries", "Dining", "Shopping", "Transport", "Utilities", "Entertainment"];
   const now = new Date();
   
   for (let i = 30; i >= 0; i--) {
     const date = subDays(now, i);
-    const dayData = {
+    const dayData: SpendingDataItem = {
       date: format(date, 'MMM dd'),
-      total: 0
+      total: 0,
+      Groceries: 0,
+      Dining: 0,
+      Shopping: 0,
+      Transport: 0,
+      Utilities: 0,
+      Entertainment: 0
     };
     
     // Add random spending for each category
@@ -83,7 +121,7 @@ const generateSpendingData = () => {
 };
 
 // Generate realistic transaction data
-const generateTransactions = () => {
+const generateTransactions = (): CustomTransaction[] => {
   const merchants = [
     { name: "Whole Foods Market", category: "Groceries", icon: "🛒" },
     { name: "Starbucks", category: "Dining", icon: "☕" },
@@ -107,13 +145,13 @@ const generateTransactions = () => {
       icon: merchant.icon,
       amount: amount,
       date: subDays(new Date(), daysAgo),
-      type: Math.random() > 0.2 ? "debit" : "credit"
+      type: Math.random() > 0.2 ? "debit" : "credit" as 'debit' | 'credit'
     };
   });
 };
 
 // Generate notifications
-const generateNotifications = () => {
+const generateNotifications = (): Notification[] => {
   return [
     {
       id: "notif-1",
@@ -121,7 +159,7 @@ const generateNotifications = () => {
       description: "A transaction of $350.00 was made from your account",
       time: "10 minutes ago",
       read: false,
-      type: "alert"
+      type: "alert" as 'alert'
     },
     {
       id: "notif-2",
@@ -129,7 +167,7 @@ const generateNotifications = () => {
       description: "Your April statement is ready to view",
       time: "2 hours ago",
       read: true,
-      type: "info"
+      type: "info" as 'info'
     },
     {
       id: "notif-3",
@@ -137,7 +175,7 @@ const generateNotifications = () => {
       description: "We've enhanced our security measures",
       time: "Yesterday",
       read: true,
-      type: "security"
+      type: "security" as 'security'
     }
   ];
 };
@@ -146,96 +184,42 @@ export default function DashboardPage() {
   const router = useRouter();
   const { user } = useUserStore();
   const [accounts, setAccounts] = useState<Account[]>([]);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [statistics, setStatistics] = useState<Statistics | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const { theme, setTheme } = useTheme();
+  const [spendingData, setSpendingData] = useState<SpendingDataItem[]>([]);
+  const [transactions, setTransactions] = useState<CustomTransaction[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [hideBalances, setHideBalances] = useState(false);
-  const [spendingData, setSpendingData] = useState([]);
-  const [accountBalance, setAccountBalance] = useState(0);
-  const [savingsBalance, setSavingsBalance] = useState(0);
-  const [notifications, setNotifications] = useState([]);
-
-  // Fetch dashboard data
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        // Check if user is authenticated
-        if (!user) {
-          router.push('/login');
-          return;
-        }
-
-        // Fetch data in parallel
-        const [accountsRes, transactionsRes, statsRes] = await Promise.all([
-          fetch('/api/accounts', { credentials: 'include' }),
-          fetch('/api/transactions?limit=5', { credentials: 'include' }),
-          fetch('/api/statistics', { credentials: 'include' })
-        ]);
-
-        // Handle response errors
-        if (!accountsRes.ok || !transactionsRes.ok || !statsRes.ok) {
-          const errorData = await accountsRes.json().catch(() => ({}));
-          throw new Error(errorData.error || 'Failed to fetch dashboard data');
-        }
-
-        // Parse responses
-        const [accountsData, transactionsData, statsData] = await Promise.all([
-          accountsRes.json(),
-          transactionsRes.json(),
-          statsRes.json()
-        ]);
-
-        // Update state
-        setAccounts(accountsData);
-        setTransactions(transactionsData);
-        setStatistics(statsData);
-
-        // Show success toast
-        toast.success('Dashboard updated');
-
-      } catch (err: any) {
-        console.error('Dashboard data fetch error:', err);
-        setError(err.message || 'Failed to load dashboard data');
-        toast.error('Failed to load dashboard data');
-
-        // Handle authentication errors
-        if (err.message?.includes('unauthorized')) {
-          router.push('/login');
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchDashboardData();
-  }, [user, router]);
+  const [loading, setLoading] = useState(true);
+  
+  // Calculate category totals for the donut chart
+  const categoryData = spendingData.length > 0 
+    ? [
+        { name: "Groceries", amount: spendingData.reduce((sum, day) => sum + (day.Groceries || 0), 0) },
+        { name: "Dining", amount: spendingData.reduce((sum, day) => sum + (day.Dining || 0), 0) },
+        { name: "Shopping", amount: spendingData.reduce((sum, day) => sum + (day.Shopping || 0), 0) },
+        { name: "Transport", amount: spendingData.reduce((sum, day) => sum + (day.Transport || 0), 0) },
+        { name: "Utilities", amount: spendingData.reduce((sum, day) => sum + (day.Utilities || 0), 0) },
+        { name: "Entertainment", amount: spendingData.reduce((sum, day) => sum + (day.Entertainment || 0), 0) }
+      ]
+    : [];
 
   useEffect(() => {
-    // Simulate API calls
     const fetchData = async () => {
       try {
         setLoading(true);
         
-        // Simulate network delay
-        await new Promise(resolve => setTimeout(resolve, 800));
+        // Fetch accounts
+        const accountsRes = await fetch("/api/accounts");
+        const accountsData = await accountsRes.json();
+        setAccounts(accountsData);
         
-        // Generate data
+        // Generate other data
         setSpendingData(generateSpendingData());
         setTransactions(generateTransactions());
         setNotifications(generateNotifications());
-        
-        // Set account balances with some randomness but realistic values
-        setAccountBalance(Math.round(Math.random() * 3000) + 1500);
-        setSavingsBalance(Math.round(Math.random() * 10000) + 5000);
-        
-        setLoading(false);
       } catch (error) {
         toast.error("Failed to load dashboard data");
+        console.error(error);
+      } finally {
         setLoading(false);
       }
     };
@@ -243,335 +227,98 @@ export default function DashboardPage() {
     fetchData();
   }, []);
 
-  const handleLogout = async () => {
-    try {
-      await fetch('/api/auth/logout', { method: 'POST' });
-      router.push('/login');
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
-  };
-
-  const chartData = {
-    labels: statistics?.transactionStats.map(stat => 
-      format(parseISO(stat.date), 'MMM d')
-    ) || [],
-    datasets: [
-      {
-        label: 'Income',
-        data: statistics?.transactionStats.map(stat => stat.income) || [],
-        borderColor: 'rgb(34, 197, 94)',
-        backgroundColor: 'rgba(34, 197, 94, 0.1)',
-        fill: true,
-        tension: 0.4,
-      },
-      {
-        label: 'Spending',
-        data: statistics?.transactionStats.map(stat => stat.spending) || [],
-        borderColor: 'rgb(239, 68, 68)',
-        backgroundColor: 'rgba(239, 68, 68, 0.1)',
-        fill: true,
-        tension: 0.4,
-      }
-    ]
-  };
-
-  const fetchAccounts = async () => {
-    try {
-      const res = await fetch("/api/accounts");
-      if (!res.ok) {
-        const error = await res.json();
-        console.error("Error response:", error);
-        if (res.status === 401) {
-          router.push('/login');
-          return;
-        }
-        throw new Error(error.error || "Failed to fetch accounts");
-      }
-      const data = await res.json();
-      console.log("Fetched accounts:", data);
-      setAccounts(data);
-    } catch (error) {
-      console.error("Error fetching accounts:", error);
-    }
-  };
-
-  // Calculate spending by category for the donut chart
-  const categorySpending = spendingData.reduce((acc, day) => {
-    Object.keys(day).forEach(key => {
-      if (key !== 'date' && key !== 'total') {
-        if (!acc[key]) acc[key] = 0;
-        acc[key] += day[key];
-      }
-    });
-    return acc;
-  }, {});
-  
-  const categoryData = Object.keys(categorySpending).map(category => ({
-    name: category,
-    amount: categorySpending[category]
-  }));
-
-  // Loading state with animation
-  if (loading) {
-    return (
-      <motion.div 
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="min-h-screen flex items-center justify-center"
-      >
-        <div className="space-y-4 text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-amber-500 mx-auto" />
-          <Text>Loading your financial overview...</Text>
-        </div>
-      </motion.div>
-    );
-  }
-
-  // Error state with retry button
-  if (error) {
-    return (
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="min-h-screen flex items-center justify-center p-4"
-      >
-        <Card className="max-w-lg mx-auto p-6">
-          <div className="text-center space-y-4">
-            <div className="text-red-500 mb-4">
-              <svg className="w-12 h-12 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-            </div>
-            <Title className="text-red-600">Error Loading Dashboard</Title>
-            <Text>{error}</Text>
-            <Button 
-              onClick={() => window.location.reload()}
-              color="amber"
-              size="lg"
-            >
-              Try Again
-            </Button>
-          </div>
-        </Card>
-      </motion.div>
-    );
-  }
-
   return (
-    <AnimatePresence mode="wait">
+    <AnimatePresence>
       <motion.div
-        key="dashboard"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="min-h-screen bg-gradient-to-b from-amber-50 to-white dark:from-gray-900 dark:to-gray-800"
+        className="p-8 max-w-7xl mx-auto"
       >
-        <div className="p-8 max-w-7xl mx-auto">
-          {/* Header Section */}
-          <motion.div 
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-8"
-          >
-            <div className="flex justify-between items-center">
-              <div>
-                <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">
-                  Welcome back, {user?.first_name}!
-                </h1>
-                <p className="text-gray-600 dark:text-gray-400 mt-1">
-                  Here's your financial overview
-                </p>
-              </div>
-              <button
-                onClick={() => setHideBalances(!hideBalances)}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
-              >
-                {hideBalances ? (
-                  <EyeSlashIcon className="w-5 h-5 text-gray-500" />
-                ) : (
-                  <EyeIcon className="w-5 h-5 text-gray-500" />
-                )}
-              </button>
-            </div>
-          </motion.div>
-
+        <div className="space-y-8">
           <motion.div
             variants={container}
             initial="hidden"
             animate="show"
             className="space-y-6"
           >
-            {/* Balance Cards */}
-            <motion.div variants={item} className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <Card 
-                className="bg-gradient-to-br from-amber-500 to-amber-600 text-white hover:shadow-lg transition-shadow duration-200"
-                decoration="top"
-                decorationColor="amber"
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <div className="p-2 bg-white/10 rounded-lg">
-                    <BanknotesIcon className="w-6 h-6 text-white" />
-                  </div>
-                  <Badge color="white" size="sm">Total Balance</Badge>
-                </div>
-                <Metric className="text-white">
-                  {hideBalances ? '••••••' : `$${statistics?.totalBalance.toLocaleString()}`}
-                </Metric>
-                <Text className="text-white/80 mt-2">Across all accounts</Text>
-              </Card>
-
-              <Card 
-                className="bg-gradient-to-br from-emerald-500 to-emerald-600 text-white"
-                decoration="top"
-                decorationColor="emerald"
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <div className="p-2 bg-white/10 rounded-lg">
-                    <ArrowTrendingUpIcon className="w-6 h-6 text-white" />
-                  </div>
-                  <Badge color="white" size="sm">Monthly Income</Badge>
-                </div>
-                <Metric className="text-white">
-                  {hideBalances ? '••••••' : `$${statistics?.monthlyIncome.toLocaleString()}`}
-                </Metric>
-                <Text className="text-white/80 mt-2">Last 30 days</Text>
-              </Card>
-
-              <Card 
-                className="bg-gradient-to-br from-rose-500 to-rose-600 text-white"
-                decoration="top"
-                decorationColor="rose"
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <div className="p-2 bg-white/10 rounded-lg">
-                    <ArrowDownIcon className="w-6 h-6 text-white" />
-                  </div>
-                  <Badge color="white" size="sm">Monthly Spending</Badge>
-                </div>
-                <Metric className="text-white">
-                  {hideBalances ? '••••••' : `$${statistics?.monthlySpending.toLocaleString()}`}
-                </Metric>
-                <Text className="text-white/80 mt-2">Last 30 days</Text>
-              </Card>
-            </motion.div>
-
-            {/* Chart Section */}
-            <motion.div variants={item}>
-              <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-lg">
-                <div className="flex items-center justify-between mb-6">
-                  <div>
-                    <Title>Financial Overview</Title>
-                    <Text>Income vs Spending Trends</Text>
-                  </div>
-                  <div className="flex gap-2">
-                    <Badge color="emerald">Income</Badge>
-                    <Badge color="rose">Spending</Badge>
-                  </div>
-                </div>
-                <div className="h-[400px] mt-4">
-                  <AreaChart
-                    data={statistics?.transactionStats || []}
-                    index="date"
-                    categories={["income", "spending"]}
-                    colors={["emerald", "rose"]}
-                    valueFormatter={(value) => `$${value.toLocaleString()}`}
-                    showLegend={false}
-                    showGridLines={false}
-                    curveType="natural"
-                    className="h-full"
-                    showAnimation={true}
-                  />
-                </div>
-              </Card>
-            </motion.div>
-
-            {/* Accounts Section */}
-            <motion.div variants={item}>
-              <div className="flex items-center justify-between mb-4">
-                <Title>Your Accounts</Title>
-                <button className="text-sm text-amber-600 hover:text-amber-700 font-medium">
-                  View All
-                </button>
+            {/* Header */}
+            <motion.div variants={item} className="flex justify-between items-center">
+              <div>
+                <Title>Welcome back, {user?.first_name || 'User'}</Title>
+                <Text>Here's an overview of your finances</Text>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                {accounts.map((account) => (
-                  <Card
-                    key={account.id}
-                    className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-lg hover:shadow-lg transition-all duration-200"
-                  >
-                    <div className="flex items-center justify-between mb-6">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
-                          <CreditCardIcon className="w-5 h-5 text-amber-600" />
-                        </div>
-                        <div>
-                          <Text>{account.account_type.toUpperCase()}</Text>
-                          <Text className="text-xs text-gray-500">
-                            •••• {account.account_number.slice(-4)}
-                          </Text>
-                        </div>
-                      </div>
-                      <Badge color={
-                        account.status === 'active' ? 'emerald' :
-                        account.status === 'frozen' ? 'rose' : 'gray'
-                      }>
-                        {account.status}
-                      </Badge>
+              <Button
+                icon={hideBalances ? EyeIcon : EyeSlashIcon}
+                variant="light"
+                onClick={() => setHideBalances(!hideBalances)}
+              >
+                {hideBalances ? "Show" : "Hide"} Balances
+              </Button>
+            </motion.div>
+
+            {/* Account Summary */}
+            <motion.div variants={item}>
+              <Card className="bg-gradient-to-r from-amber-500 to-amber-600 text-white">
+                <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 bg-white/10 rounded-xl">
+                      <CreditCardIcon className="w-8 h-8 text-white" />
                     </div>
-                    <Metric>
-                      {hideBalances ? '••••••' : `${account.currency} ${account.balance.toLocaleString()}`}
-                    </Metric>
-                  </Card>
+                    <div>
+                      <Text className="text-white/80">Total Balance</Text>
+                      <Metric className="text-white">
+                        {hideBalances ? '••••••' : `$${accounts.reduce((sum, account) => sum + account.balance, 0).toLocaleString()}`}
+                      </Metric>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-white/10 p-4 rounded-xl">
+                      <div className="flex items-center gap-2">
+                        <ArrowUpIcon className="w-5 h-5 text-emerald-300" />
+                        <Text className="text-white/80">Income</Text>
+                      </div>
+                      <Metric className="text-white text-xl">
+                        {hideBalances ? '••••' : `$${(Math.random() * 5000 + 3000).toFixed(2)}`}
+                      </Metric>
+                    </div>
+                    
+                    <div className="bg-white/10 p-4 rounded-xl">
+                      <div className="flex items-center gap-2">
+                        <ArrowDownIcon className="w-5 h-5 text-rose-300" />
+                        <Text className="text-white/80">Spending</Text>
+                      </div>
+                      <Metric className="text-white text-xl">
+                        {hideBalances ? '••••' : `$${(Math.random() * 2000 + 1000).toFixed(2)}`}
+                      </Metric>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            </motion.div>
+
+            {/* Quick Actions */}
+            <motion.div variants={item}>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {[
+                  { name: "Transfer", icon: ArrowsRightLeftIcon, color: "bg-amber-100 dark:bg-amber-900/30 text-amber-600", path: "/dashboard/transfer" },
+                  { name: "Pay Bills", icon: BanknotesIcon, color: "bg-rose-100 dark:bg-rose-900/30 text-rose-600", path: "/dashboard/payments" },
+                  { name: "Accounts", icon: CreditCardIcon, color: "bg-blue-100 dark:bg-blue-900/30 text-blue-600", path: "/dashboard/accounts" },
+                  { name: "Analytics", icon: ArrowTrendingUpIcon, color: "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600", path: "/dashboard/analytics" }
+                ].map((action, index) => (
+                  <Link href={action.path} key={index}>
+                    <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-lg hover:shadow-md transition-all duration-200">
+                      <div className="flex flex-col items-center text-center">
+                        <div className={`p-3 rounded-xl ${action.color.split(' ')[0]} ${action.color.split(' ')[1]}`}>
+                          <action.icon className={`w-6 h-6 ${action.color.split(' ')[2]}`} />
+                        </div>
+                        <Text className="mt-2">{action.name}</Text>
+                      </div>
+                    </Card>
+                  </Link>
                 ))}
               </div>
-            </motion.div>
-
-            {/* Recent Transactions */}
-            <motion.div variants={item}>
-              <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-lg">
-                <div className="flex items-center justify-between mb-6">
-                  <Title>Recent Transactions</Title>
-                  <button className="text-sm text-amber-600 hover:text-amber-700 font-medium">
-                    See All
-                  </button>
-                </div>
-                <div className="divide-y dark:divide-gray-700">
-                  {transactions.slice(0, 5).map((transaction) => (
-                    <div
-                      key={transaction.id}
-                      className="flex items-center justify-between py-4"
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className={`p-2 rounded-lg ${
-                          transaction.type === 'deposit' 
-                            ? 'bg-emerald-100 dark:bg-emerald-900/30' 
-                            : 'bg-rose-100 dark:bg-rose-900/30'
-                        }`}>
-                          {transaction.type === 'deposit' ? 
-                            <ArrowUpIcon className="w-5 h-5 text-emerald-600" /> :
-                            <ArrowDownIcon className="w-5 h-5 text-rose-600" />
-                          }
-                        </div>
-                        <div>
-                          <Text>{transaction.description}</Text>
-                          <Text className="text-xs text-gray-500">
-                            {format(new Date(transaction.created_at), 'MMM d, yyyy • h:mm a')}
-                          </Text>
-                        </div>
-                      </div>
-                      <Text className={
-                        transaction.type === 'deposit' 
-                          ? 'text-emerald-600 dark:text-emerald-500' 
-                          : 'text-rose-600 dark:text-rose-500'
-                      }>
-                        {transaction.type === 'deposit' ? '+' : '-'}
-                        ${hideBalances ? '••••' : transaction.amount.toLocaleString()}
-                      </Text>
-                    </div>
-                  ))}
-                </div>
-              </Card>
             </motion.div>
 
             {/* Spending Overview & Recent Transactions */}

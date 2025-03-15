@@ -328,8 +328,8 @@ export default function LandingPage() {
                     exit={{ opacity: 0, y: -20 }}
                     transition={{ duration: 0.3 }}
                     className="aspect-[4/3] relative"
-                  >
-                    <Image 
+        >
+          <Image
                       src={`/feature-${activeFeature + 1}.png`} 
                       alt={features[activeFeature].title}
                       fill
@@ -408,7 +408,7 @@ export default function LandingPage() {
                 <div className="absolute inset-0 bg-gradient-to-l from-emerald-500/20 to-blue-500/20 rounded-3xl transform -rotate-1"></div>
                 <div className="relative bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-3xl shadow-xl overflow-hidden p-8">
                   <div className="aspect-square relative">
-                    <Image 
+          <Image
                       src="/security-illustration.png" 
                       alt="Security Illustration" 
                       fill
@@ -450,7 +450,7 @@ export default function LandingPage() {
               >
                 <div className="flex items-center gap-4 mb-6">
                   <div className="w-12 h-12 rounded-full overflow-hidden relative">
-                    <Image 
+          <Image
                       src={testimonial.avatar} 
                       alt={testimonial.name}
                       fill
