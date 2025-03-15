@@ -1,36 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
-import { query, querySingle } from "@/lib/mysql";
+import { query } from "@/lib/mysql";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { v4 as uuidv4 } from "uuid";
 import { RowDataPacket } from "mysql2";
 
-interface UserRow {
+interface UserRow extends RowDataPacket {
   id: string;
-  username: string;
   password: string;
-  first_name: string;
-  last_name: string;
+  username: string;
   email: string;
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const { username, password } = await req.json();
-
-    // Validate input
-    if (!username || !password) {
-      return NextResponse.json(
-        { error: "Username and password are required" },
-        { status: 400 }
-      );
-    }
+    const { email, password } = await req.json();
 
     // Get user
-    const user = await querySingle<UserRow>({
-      sql: `SELECT id, username, password, first_name, last_name, email FROM users WHERE username = ?`,
-      values: [username],
-    });
+    const users = await query({
+      query: "SELECT * FROM users WHERE email = ?",
+      values: [email],
+    }) as UserRow[];
+
+    const user = users[0];
 
     if (!user) {
       return NextResponse.json(
@@ -60,9 +52,8 @@ export async function POST(req: NextRequest) {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
 
-    // Save session
     await query({
-      sql: `
+      query: `
         INSERT INTO sessions (id, user_id, token, expires_at)
         VALUES (?, ?, ?, ?)
       `,
@@ -70,30 +61,28 @@ export async function POST(req: NextRequest) {
     });
 
     // Set cookie
-    const response = NextResponse.json({
-      user: {
-        id: user.id,
-        username: user.username,
-        first_name: user.first_name,
-        last_name: user.last_name,
-        email: user.email,
-      },
-    });
+    const response = NextResponse.json(
+      { message: "Logged in successfully" },
+      { status: 200 }
+    );
 
     response.cookies.set({
-      name: 'token',
+      name: "auth_token",
       value: token,
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      expires: expiresAt,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 7 * 24 * 60 * 60, // 7 days
     });
+
+    console.log("Set auth cookie:", token);
 
     return response;
   } catch (error: any) {
     console.error("Login error:", error);
     return NextResponse.json(
-      { error: "Login failed" },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

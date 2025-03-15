@@ -3,14 +3,11 @@ export interface User {
   first_name: string;
   last_name: string;
   email: string;
-  username: string;
   phone: string;
   date_of_birth: string;
   gender: string;
   marital_status: string;
   last_login: string;
-  created_at: string;
-  updated_at: string;
 }
 
 export interface Account {

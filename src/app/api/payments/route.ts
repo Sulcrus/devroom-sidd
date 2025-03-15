@@ -1,17 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
-import { query, querySingle } from "@/lib/mysql";
+import { NextResponse } from "next/server";
+import { query } from "@/lib/mysql";
 import { getAuthUser } from "@/lib/auth";
 import { v4 as uuidv4 } from "uuid";
 import { generateReferenceNumber } from "@/lib/utils";
 
-interface AccountRow {
-  id: string;
-  balance: number;
-  currency: string;
-  status: string;
-}
-
-export async function POST(req: NextRequest) {
+export async function POST(req: Request) {
   try {
     const user = await getAuthUser(req);
     
@@ -38,11 +31,11 @@ export async function POST(req: NextRequest) {
 
     try {
       // Start transaction
-      await query({ sql: "START TRANSACTION" });
+      await query({ query: "START TRANSACTION" });
 
       // Get source account and verify balance
-      const fromAccount = await querySingle<AccountRow>({
-        sql: `
+      const [fromAccount] = await query({
+        query: `
           SELECT id, balance, currency, status 
           FROM accounts 
           WHERE id = ? AND user_id = ? AND status = 'active'
@@ -65,7 +58,7 @@ export async function POST(req: NextRequest) {
 
       // Create transaction record
       await query({
-        sql: `
+        query: `
           INSERT INTO transactions (
             id,
             reference_number,
@@ -90,7 +83,7 @@ export async function POST(req: NextRequest) {
 
       // Update account balance
       await query({
-        sql: `
+        query: `
           UPDATE accounts 
           SET balance = balance - ?,
               updated_at = CURRENT_TIMESTAMP
@@ -101,7 +94,7 @@ export async function POST(req: NextRequest) {
 
       // Update monthly statistics
       await query({
-        sql: `
+        query: `
           INSERT INTO monthly_statistics (
             user_id, 
             type, 
@@ -116,7 +109,7 @@ export async function POST(req: NextRequest) {
 
       // Create notification
       await query({
-        sql: `
+        query: `
           INSERT INTO notifications (
             id,
             user_id,
@@ -134,7 +127,7 @@ export async function POST(req: NextRequest) {
       });
 
       // Commit transaction
-      await query({ sql: "COMMIT" });
+      await query({ query: "COMMIT" });
 
       return NextResponse.json({
         message: "Payment successful",
@@ -142,7 +135,7 @@ export async function POST(req: NextRequest) {
       });
     } catch (error: any) {
       // Rollback on error
-      await query({ sql: "ROLLBACK" });
+      await query({ query: "ROLLBACK" });
       throw error;
     }
   } catch (error: any) {

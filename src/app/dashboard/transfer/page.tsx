@@ -18,7 +18,6 @@ export default function TransferPage() {
   const [success, setSuccess] = useState<string | null>(null);
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
-  const [userLoading, setUserLoading] = useState(true);
 
   const [formData, setFormData] = useState({
     fromAccountId: "",
@@ -28,15 +27,10 @@ export default function TransferPage() {
   });
 
   useEffect(() => {
-    Promise.all([
-      fetchUser(),
-      fetchAccounts(),
-      fetchRecentTransactions()
-    ]).finally(() => setLoading(false));
+    Promise.all([fetchUser(), fetchAccounts(), fetchRecentTransactions()]).finally(() => setLoading(false));
   }, []);
 
   const fetchUser = async () => {
-    setUserLoading(true);
     try {
       const res = await fetch("/api/user");
       if (res.ok) {
@@ -45,8 +39,6 @@ export default function TransferPage() {
       }
     } catch (error) {
       console.error("Error fetching user:", error);
-    } finally {
-      setUserLoading(false);
     }
   };
 
@@ -148,13 +140,9 @@ export default function TransferPage() {
             <UserCircleIcon className="h-6 w-6 text-amber-500" />
             <div className="flex items-center gap-2 bg-white dark:bg-gray-800 px-4 py-2 rounded-full shadow-sm">
               <Text>Your username:</Text>
-              {userLoading ? (
-                <div className="h-6 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-              ) : (
-                <Badge color="amber" size="lg">
-                  @{user?.username || "N/A"}
-                </Badge>
-              )}
+              <Badge color="amber" size="lg">
+                @{user?.username || "loading..."}
+              </Badge>
             </div>
           </div>
         </div>

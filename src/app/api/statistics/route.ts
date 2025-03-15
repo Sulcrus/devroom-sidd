@@ -1,34 +1,60 @@
 import { NextRequest, NextResponse } from "next/server";
 import { query } from "@/lib/mysql";
 import { getAuthUser } from "@/lib/auth";
+import { RowDataPacket } from "mysql2";
+
+interface UserRow extends RowDataPacket {
+  id: string;
+}
+
+interface StatRow extends RowDataPacket {
+  type: 'income' | 'spending';
+  amount: number;
+}
+
+interface CategoryRow extends RowDataPacket {
+  category: string;
+  color: string;
+  amount: number;
+}
+
+interface BalanceRow extends RowDataPacket {
+  total: number;
+}
+
+interface TransactionStatRow extends RowDataPacket {
+  date: string;
+  income: number;
+  spending: number;
+}
 
 export async function GET(req: NextRequest) {
   try {
-    const user = await getAuthUser(req);
+    const user = await getAuthUser(req) as UserRow;
     
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const [
-      totalBalance,
-      monthlyStats,
-      spendingByCategory,
-      transactionStats
+      totalBalanceResult,
+      monthlyStatsResult,
+      spendingByCategoryResult,
+      transactionStatsResult
     ] = await Promise.all([
       // Get total balance
       query({
-        sql: `
+        query: `
           SELECT SUM(balance) as total
           FROM accounts
           WHERE user_id = ? AND status = 'active'
         `,
         values: [user.id],
-      }),
+      }) as Promise<BalanceRow[]>,
 
       // Get monthly income and spending
       query({
-        sql: `
+        query: `
           SELECT 
             'income' as type,
             COALESCE(SUM(CASE 
@@ -50,11 +76,11 @@ export async function GET(req: NextRequest) {
           AND YEAR(t.created_at) = YEAR(CURRENT_DATE())
         `,
         values: [user.id, user.id],
-      }),
+      }) as Promise<StatRow[]>,
 
       // Get spending by category
       query({
-        sql: `
+        query: `
           SELECT 
             tc.name as category,
             tc.color,
@@ -68,11 +94,11 @@ export async function GET(req: NextRequest) {
           ORDER BY amount DESC
         `,
         values: [user.id],
-      }),
+      }) as Promise<CategoryRow[]>,
 
       // Get daily transaction stats
       query({
-        sql: `
+        query: `
           SELECT 
             DATE(t.created_at) as date,
             SUM(CASE WHEN a_to.user_id = ? THEN t.amount ELSE 0 END) as income,
@@ -86,25 +112,25 @@ export async function GET(req: NextRequest) {
           ORDER BY date ASC
         `,
         values: [user.id, user.id, user.id, user.id],
-      }),
+      }) as Promise<TransactionStatRow[]>,
     ]);
 
     // Get monthly totals from the results
-    const monthlyIncome = monthlyStats.find((stat: any) => stat.type === 'income')?.amount || 0;
-    const monthlySpending = monthlyStats.find((stat: any) => stat.type === 'spending')?.amount || 0;
+    const monthlyIncome = monthlyStatsResult.find(stat => stat.type === 'income')?.amount || 0;
+    const monthlySpending = monthlyStatsResult.find(stat => stat.type === 'spending')?.amount || 0;
 
     // Calculate percentages for spending by category
-    const totalSpent = spendingByCategory.reduce((sum: number, cat: any) => sum + cat.amount, 0);
-    const categoriesWithPercentages = spendingByCategory.map((cat: any) => ({
+    const totalSpent = spendingByCategoryResult.reduce((sum, cat) => sum + cat.amount, 0);
+    const categoriesWithPercentages = spendingByCategoryResult.map(cat => ({
       ...cat,
       percentage: totalSpent ? (cat.amount / totalSpent) * 100 : 0
     }));
 
     return NextResponse.json({
-      totalBalance: totalBalance[0]?.total || 0,
+      totalBalance: totalBalanceResult[0]?.total || 0,
       monthlyIncome,
       monthlySpending,
-      transactionStats,
+      transactionStats: transactionStatsResult,
       spendingByCategory: categoriesWithPercentages,
     });
   } catch (error) {

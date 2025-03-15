@@ -103,6 +103,26 @@ export default function DashboardLayout({
     }
   };
 
+  const handleLogout = async () => {
+    try {
+      const res = await fetch('/api/auth/logout', { 
+        method: 'POST',
+        credentials: 'include' // Important!
+      });
+
+      if (!res.ok) {
+        throw new Error('Logout failed');
+      }
+
+      // Force reload to clear any client state
+      window.location.href = '/login';
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Still redirect on error
+      window.location.href = '/login';
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Sidebar */}
@@ -186,14 +206,7 @@ export default function DashboardLayout({
           {/* Footer */}
           <div className="p-4 border-t dark:border-gray-700">
             <button
-              onClick={async () => {
-                try {
-                  await fetch('/api/auth/logout', { method: 'POST' });
-                  window.location.href = '/login';
-                } catch (error) {
-                  console.error('Logout error:', error);
-                }
-              }}
+              onClick={handleLogout}
               className="flex items-center w-full px-4 py-2.5 text-sm font-medium text-gray-600 rounded-lg hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

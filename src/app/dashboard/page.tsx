@@ -119,6 +119,26 @@ export default function DashboardPage() {
     ]
   };
 
+  const fetchAccounts = async () => {
+    try {
+      const res = await fetch("/api/accounts");
+      if (!res.ok) {
+        const error = await res.json();
+        console.error("Error response:", error);
+        if (res.status === 401) {
+          router.push('/login');
+          return;
+        }
+        throw new Error(error.error || "Failed to fetch accounts");
+      }
+      const data = await res.json();
+      console.log("Fetched accounts:", data);
+      setAccounts(data);
+    } catch (error) {
+      console.error("Error fetching accounts:", error);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">

@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { query } from "@/lib/mysql";
 import { getAuthUser } from "@/lib/auth";
 
-export async function GET(req: NextRequest) {
+export async function GET(req: Request) {
   try {
     const user = await getAuthUser(req);
     
@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
     }
 
     const notifications = await query({
-      sql: `
+      query: `
         SELECT * FROM notifications 
         WHERE user_id = ? 
         ORDER BY created_at DESC 

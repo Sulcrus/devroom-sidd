@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { query } from "@/lib/mysql";
 import { getAuthUser } from "@/lib/auth";
 import { v4 as uuidv4 } from "uuid";
@@ -6,7 +6,7 @@ import { generateReferenceNumber } from "@/lib/utils";
 
 async function createNotification(userId: string, title: string, message: string, type: 'success' | 'warning' | 'error' | 'info') {
   await query({
-    sql: `
+    query: `
       INSERT INTO notifications (id, user_id, title, message, type)
       VALUES (?, ?, ?, ?, ?)
     `,
@@ -14,7 +14,7 @@ async function createNotification(userId: string, title: string, message: string
   });
 }
 
-export async function POST(req: NextRequest) {
+export async function POST(req: Request) {
   try {
     const user = await getAuthUser(req);
     
@@ -33,12 +33,12 @@ export async function POST(req: NextRequest) {
     }
 
     // Start transaction
-    await query({ sql: "START TRANSACTION" });
+    await query({ query: "START TRANSACTION" });
 
     try {
-      // Get source account and verify balance
+      // Check if source account exists and belongs to user
       const [fromAccount] = await query({
-        sql: `
+        query: `
           SELECT id, balance, status, currency
           FROM accounts 
           WHERE id = ? AND user_id = ? AND status = 'active'
@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
 
       // Find recipient's default account by username
       const [recipientAccount] = await query({
-        sql: `
+        query: `
           SELECT a.id, a.status, a.currency, u.username, u.first_name, u.last_name
           FROM accounts a
           JOIN users u ON a.user_id = u.id
@@ -82,18 +82,18 @@ export async function POST(req: NextRequest) {
 
       // Update balances
       await query({
-        sql: "UPDATE accounts SET balance = balance - ? WHERE id = ?",
+        query: "UPDATE accounts SET balance = balance - ? WHERE id = ?",
         values: [amount, fromAccount.id],
       });
 
       await query({
-        sql: "UPDATE accounts SET balance = balance + ? WHERE id = ?",
+        query: "UPDATE accounts SET balance = balance + ? WHERE id = ?",
         values: [amount, recipientAccount.id],
       });
 
       // Record transaction
       await query({
-        sql: `
+        query: `
           INSERT INTO transactions (
             id, from_account_id, to_account_id, amount, 
             type, status, description, reference_number,
@@ -114,7 +114,7 @@ export async function POST(req: NextRequest) {
 
       // Update monthly statistics for sender (spending)
       await query({
-        sql: `
+        query: `
           INSERT INTO monthly_statistics (
             user_id, 
             type, 
@@ -129,7 +129,7 @@ export async function POST(req: NextRequest) {
 
       // Update monthly statistics for recipient (income)
       await query({
-        sql: `
+        query: `
           INSERT INTO monthly_statistics (
             user_id, 
             type, 
@@ -157,8 +157,7 @@ export async function POST(req: NextRequest) {
         'success'
       );
 
-      // Commit transaction
-      await query({ sql: "COMMIT" });
+      await query({ query: "COMMIT" });
 
       return NextResponse.json({
         message: "Transfer successful",
@@ -166,15 +165,18 @@ export async function POST(req: NextRequest) {
         recipientName: `${recipientAccount.first_name} ${recipientAccount.last_name}`,
       });
     } catch (error: any) {
-      // Rollback on error
-      await query({ sql: "ROLLBACK" });
-      throw error;
+      await query({ query: "ROLLBACK" });
+      
+      return NextResponse.json(
+        { error: error.message },
+        { status: 400 }
+      );
     }
-  } catch (error: any) {
+  } catch (error) {
     console.error("Transfer error:", error);
     return NextResponse.json(
-      { error: error.message || "Transfer failed" },
-      { status: 400 }
+      { error: "Internal server error" },
+      { status: 500 }
     );
   }
 } 

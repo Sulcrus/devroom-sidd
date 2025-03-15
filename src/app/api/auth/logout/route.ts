@@ -1,30 +1,47 @@
 import { NextRequest, NextResponse } from "next/server";
 import { query } from "@/lib/mysql";
 import { getAuthUser } from "@/lib/auth";
+import { RowDataPacket } from "mysql2";
+
+interface UserRow extends RowDataPacket {
+  id: string;
+}
 
 export async function POST(req: NextRequest) {
   try {
-    const user = await getAuthUser(req);
-
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const token = req.cookies.get("auth_token")?.value;
+    
+    if (!token) {
+      return NextResponse.json(
+        { error: "Not authenticated" },
+        { status: 401 }
+      );
     }
 
-    // Remove session
+    // Remove all sessions for this token
     await query({
-      sql: "DELETE FROM sessions WHERE user_id = ?",
-      values: [user.id],
+      query: "DELETE FROM sessions WHERE token = ?",
+      values: [token],
     });
 
     // Clear cookie
-    const response = NextResponse.json({ message: "Logged out successfully" });
-    response.cookies.delete('token');
+    const response = NextResponse.json(
+      { message: "Logged out successfully" },
+      { status: 200 }
+    );
+
+    // Make sure to clear the cookie properly
+    response.cookies.delete("auth_token", {
+      path: "/",
+      secure: process.env.NODE_ENV === "production",
+      httpOnly: true,
+    });
 
     return response;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Logout error:", error);
     return NextResponse.json(
-      { error: "Logout failed" },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }
