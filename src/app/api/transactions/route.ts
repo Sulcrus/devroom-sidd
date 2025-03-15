@@ -34,14 +34,10 @@ export async function GET(req: NextRequest) {
         SELECT 
           t.*,
           fa.account_number as from_account_number,
-          ta.account_number as to_account_number,
-          c.name as category_name,
-          c.icon as category_icon,
-          c.color as category_color
+          ta.account_number as to_account_number
         FROM transactions t
         LEFT JOIN accounts fa ON t.from_account_id = fa.id
         LEFT JOIN accounts ta ON t.to_account_id = ta.id
-        LEFT JOIN transaction_categories c ON t.category_id = c.id
         WHERE (fa.user_id = ? OR ta.user_id = ?)
         ORDER BY t.created_at DESC
         LIMIT 50
