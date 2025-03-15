@@ -11,12 +11,14 @@ import {
   UserCircleIcon,
   Cog6ToothIcon,
   ChartBarIcon,
+  ClockIcon,
 } from "@heroicons/react/24/outline";
 import useUserStore from "@/store/useUserStore";
 
 const menuItems = [
   { path: '/dashboard', label: 'Overview', icon: HomeIcon },
   { path: '/dashboard/accounts', label: 'Accounts', icon: CreditCardIcon },
+  { path: '/dashboard/transactions', label: 'Transactions', icon: ClockIcon },
   { path: '/dashboard/transfer', label: 'Transfer', icon: ArrowsRightLeftIcon },
   { path: '/dashboard/payments', label: 'Payments', icon: BanknotesIcon },
   { path: '/dashboard/analytics', label: 'Analytics', icon: ChartBarIcon },
