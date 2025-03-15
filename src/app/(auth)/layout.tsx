@@ -1,15 +1,9 @@
 "use client";
 
 import React from 'react';
-import { Metadata } from 'next';
 import { Toaster } from 'react-hot-toast';
 import { GeistSans } from 'geist/font/sans';
 import { motion, AnimatePresence } from "framer-motion";
-
-export const metadata: Metadata = {
-  title: 'Authentication - Siddhartha Bank',
-  description: 'Secure authentication for Siddhartha Bank',
-};
 
 export default function AuthLayout({
   children,
