@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Card, Title, Text, TextInput, Button, Select, SelectItem, Badge, Metric } from "@tremor/react";
 import { Account, User, Transaction } from "@/types";
 import { motion } from "framer-motion";
-import { ArrowRightIcon, UserCircleIcon, CreditCardIcon, BanknotesIcon, ArrowUpIcon, ArrowDownIcon, ClockIcon } from "@heroicons/react/24/outline";
+import { ArrowRightIcon, UserCircleIcon, CreditCardIcon, BanknotesIcon, ArrowUpIcon, ArrowDownIcon, ClockIcon, InformationCircleIcon } from "@heroicons/react/24/outline";
 import { format } from "date-fns";
 import { toast } from "sonner";
 
@@ -146,18 +146,18 @@ export default function TransferPage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="mb-10">
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white">
-            Transfer Money
-          </h1>
-          <div className="mt-4 flex items-center gap-3">
-            <UserCircleIcon className="h-6 w-6 text-amber-500" />
-            <div className="flex items-center gap-2 bg-white dark:bg-gray-800 px-4 py-2 rounded-full shadow-sm">
-              <Text>Your username:</Text>
-              <Badge color="amber" size="lg">
-                @{user?.username || "loading..."}
-              </Badge>
+        {/* Info Box */}
+        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <InformationCircleIcon className="w-5 h-5 text-blue-600" />
+            </div>
+            <div>
+              <h3 className="font-medium text-blue-900">Quick Transfer Tips</h3>
+              <p className="text-sm text-blue-700">
+                Enter the recipient's username to transfer money instantly. Make sure to verify 
+                the recipient's details before confirming.
+              </p>
             </div>
           </div>
         </div>
