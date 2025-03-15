@@ -12,20 +12,8 @@ interface StatRow extends RowDataPacket {
   amount: number;
 }
 
-interface CategoryRow extends RowDataPacket {
-  category: string;
-  color: string;
-  amount: number;
-}
-
 interface BalanceRow extends RowDataPacket {
   total: number;
-}
-
-interface TransactionStatRow extends RowDataPacket {
-  date: string;
-  income: number;
-  spending: number;
 }
 
 export async function GET(req: NextRequest) {
@@ -33,106 +21,69 @@ export async function GET(req: NextRequest) {
     const user = await getAuthUser(req) as UserRow;
     
     if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
     }
 
-    const [
-      totalBalanceResult,
-      monthlyStatsResult,
-      spendingByCategoryResult,
-      transactionStatsResult
-    ] = await Promise.all([
-      // Get total balance
-      query({
-        query: `
-          SELECT SUM(balance) as total
-          FROM accounts
-          WHERE user_id = ? AND status = 'active'
-        `,
-        values: [user.id],
-      }) as Promise<BalanceRow[]>,
+    // Get total balance across all accounts
+    const totalBalanceResult = await query({
+      query: `
+        SELECT SUM(balance) as total
+        FROM accounts
+        WHERE user_id = ?
+      `,
+      values: [user.id],
+    }) as BalanceRow[];
 
-      // Get monthly income and spending
-      query({
-        query: `
-          SELECT 
-            'income' as type,
-            COALESCE(SUM(CASE 
-              WHEN t.to_account_id IN (SELECT id FROM accounts WHERE user_id = ?) 
-              THEN t.amount ELSE 0 
-            END), 0) as amount
-          FROM transactions t
-          WHERE MONTH(t.created_at) = MONTH(CURRENT_DATE())
-          AND YEAR(t.created_at) = YEAR(CURRENT_DATE())
-          UNION ALL
-          SELECT 
-            'spending' as type,
-            COALESCE(SUM(CASE 
-              WHEN t.from_account_id IN (SELECT id FROM accounts WHERE user_id = ?) 
-              THEN t.amount ELSE 0 
-            END), 0) as amount
-          FROM transactions t
-          WHERE MONTH(t.created_at) = MONTH(CURRENT_DATE())
-          AND YEAR(t.created_at) = YEAR(CURRENT_DATE())
-        `,
-        values: [user.id, user.id],
-      }) as Promise<StatRow[]>,
+    // Get monthly income and spending
+    const monthlyStats = await query({
+      query: `
+        SELECT 
+          CASE 
+            WHEN ta.user_id = ? THEN 'income'
+            ELSE 'spending'
+          END as type,
+          SUM(t.amount) as amount
+        FROM transactions t
+        LEFT JOIN accounts fa ON t.from_account_id = fa.id
+        LEFT JOIN accounts ta ON t.to_account_id = ta.id
+        WHERE (fa.user_id = ? OR ta.user_id = ?)
+        AND t.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+        GROUP BY type
+      `,
+      values: [user.id, user.id, user.id],
+    }) as StatRow[];
 
-      // Get spending by category
-      query({
-        query: `
-          SELECT 
-            tc.name as category,
-            tc.color,
-            SUM(t.amount) as amount
-          FROM transactions t
-          JOIN transaction_categories tc ON t.category_id = tc.id
-          JOIN accounts a ON t.from_account_id = a.id
-          WHERE a.user_id = ?
-          AND t.created_at >= DATE_SUB(NOW(), INTERVAL 1 MONTH)
-          GROUP BY tc.id
-          ORDER BY amount DESC
-        `,
-        values: [user.id],
-      }) as Promise<CategoryRow[]>,
+    // Get transaction stats by date
+    const transactionStatsResult = await query({
+      query: `
+        SELECT 
+          DATE(t.created_at) as date,
+          SUM(CASE WHEN ta.user_id = ? THEN t.amount ELSE 0 END) as income,
+          SUM(CASE WHEN fa.user_id = ? THEN t.amount ELSE 0 END) as spending
+        FROM transactions t
+        LEFT JOIN accounts fa ON t.from_account_id = fa.id
+        LEFT JOIN accounts ta ON t.to_account_id = ta.id
+        WHERE (fa.user_id = ? OR ta.user_id = ?)
+        AND t.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+        GROUP BY DATE(t.created_at)
+        ORDER BY date ASC
+      `,
+      values: [user.id, user.id, user.id, user.id],
+    });
 
-      // Get daily transaction stats
-      query({
-        query: `
-          SELECT 
-            DATE(t.created_at) as date,
-            SUM(CASE WHEN a_to.user_id = ? THEN t.amount ELSE 0 END) as income,
-            SUM(CASE WHEN a_from.user_id = ? THEN t.amount ELSE 0 END) as spending
-          FROM transactions t
-          LEFT JOIN accounts a_from ON t.from_account_id = a_from.id
-          LEFT JOIN accounts a_to ON t.to_account_id = a_to.id
-          WHERE (a_from.user_id = ? OR a_to.user_id = ?)
-          AND t.created_at >= DATE_SUB(NOW(), INTERVAL 1 MONTH)
-          GROUP BY DATE(t.created_at)
-          ORDER BY date ASC
-        `,
-        values: [user.id, user.id, user.id, user.id],
-      }) as Promise<TransactionStatRow[]>,
-    ]);
-
-    // Get monthly totals from the results
-    const monthlyIncome = monthlyStatsResult.find(stat => stat.type === 'income')?.amount || 0;
-    const monthlySpending = monthlyStatsResult.find(stat => stat.type === 'spending')?.amount || 0;
-
-    // Calculate percentages for spending by category
-    const totalSpent = spendingByCategoryResult.reduce((sum, cat) => sum + cat.amount, 0);
-    const categoriesWithPercentages = spendingByCategoryResult.map(cat => ({
-      ...cat,
-      percentage: totalSpent ? (cat.amount / totalSpent) * 100 : 0
-    }));
+    const monthlyIncome = monthlyStats.find(stat => stat.type === 'income')?.amount || 0;
+    const monthlySpending = monthlyStats.find(stat => stat.type === 'spending')?.amount || 0;
 
     return NextResponse.json({
       totalBalance: totalBalanceResult[0]?.total || 0,
       monthlyIncome,
       monthlySpending,
       transactionStats: transactionStatsResult,
-      spendingByCategory: categoriesWithPercentages,
     });
+
   } catch (error) {
     console.error("Error fetching statistics:", error);
     return NextResponse.json(
