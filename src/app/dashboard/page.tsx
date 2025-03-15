@@ -37,7 +37,12 @@ export default function DashboardPage() {
   const { user } = useUserStore();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [statistics, setStatistics] = useState<Statistics | null>(null);
+  const [statistics, setStatistics] = useState<Statistics>({
+    totalBalance: 0,
+    monthlyIncome: 0,
+    monthlySpending: 0,
+    spendingData: []
+  });
   const [loading, setLoading] = useState(true);
   const [hideBalances, setHideBalances] = useState(false);
 
@@ -214,7 +219,7 @@ export default function DashboardPage() {
               <Card>
                 <Title>Spending Overview</Title>
                 <Text>Last 30 days</Text>
-                {statistics?.spendingData && (
+                {statistics.spendingData.length > 0 && (
                   <AreaChart
                     className="h-72 mt-4"
                     data={statistics.spendingData}

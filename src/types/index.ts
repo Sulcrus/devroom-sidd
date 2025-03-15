@@ -49,17 +49,10 @@ export interface TransactionCategory {
 
 export interface Statistics {
   totalBalance: number;
-  monthlySpending: number;
   monthlyIncome: number;
-  transactionStats: {
+  monthlySpending: number;
+  spendingData: {
     date: string;
-    income: number;
-    spending: number;
-  }[];
-  spendingByCategory: {
-    category: string;
     amount: number;
-    percentage: number;
-    color: string;
   }[];
 } 
