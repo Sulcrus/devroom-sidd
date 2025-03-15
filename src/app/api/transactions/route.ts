@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { query } from "@/lib/mysql";
 import { getAuthUser } from "@/lib/auth";
 import { RowDataPacket } from "mysql2";
+import { db } from '@/lib/db';
 
 interface UserRow extends RowDataPacket {
   id: string;
@@ -21,36 +22,37 @@ interface TransactionRow extends RowDataPacket {
   to_account_number?: string;
 }
 
-export async function GET(req: NextRequest) {
+export async function GET(request: Request) {
   try {
-    const user = await getAuthUser(req) as UserRow;
-    
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const { searchParams } = new URL(request.url);
+    const userId = searchParams.get('userId');
+    const limit = searchParams.get('limit');
+
+    if (!userId) {
+      return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
     }
 
-    const transactions = await query({
-      query: `
-        SELECT 
-          t.*,
-          fa.account_number as from_account_number,
-          ta.account_number as to_account_number
-        FROM transactions t
-        LEFT JOIN accounts fa ON t.from_account_id = fa.id
-        LEFT JOIN accounts ta ON t.to_account_id = ta.id
-        WHERE (fa.user_id = ? OR ta.user_id = ?)
-        ORDER BY t.created_at DESC
-        LIMIT 50
-      `,
-      values: [user.id, user.id],
-    }) as TransactionRow[];
+    const transactions = await db.transaction.findMany({
+      where: {
+        OR: [
+          { from_account: { user_id: userId } },
+          { to_account: { user_id: userId } }
+        ]
+      },
+      orderBy: {
+        created_at: 'desc'
+      },
+      take: limit ? parseInt(limit) : undefined,
+      include: {
+        category: true,
+        from_account: true,
+        to_account: true
+      }
+    });
 
     return NextResponse.json(transactions);
   } catch (error) {
-    console.error("Error fetching transactions:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    console.error('Error fetching transactions:', error);
+    return NextResponse.json({ error: 'Failed to fetch transactions' }, { status: 500 });
   }
 } 

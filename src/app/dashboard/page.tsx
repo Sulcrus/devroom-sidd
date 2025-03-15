@@ -47,28 +47,62 @@ export default function DashboardPage() {
   const [hideBalances, setHideBalances] = useState(false);
 
   useEffect(() => {
-    fetchDashboardData();
-  }, []);
+    if (user?.id) {
+      fetchDashboardData();
+    }
+  }, [user]);
 
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
       
-      const [accountsRes, transactionsRes, statsRes] = await Promise.all([
-        fetch('/api/accounts'),
-        fetch('/api/transactions?limit=5'),
-        fetch('/api/analytics/spending')
-      ]);
-
-      const [accountsData, transactionsData, statsData] = await Promise.all([
-        accountsRes.json(),
-        transactionsRes.json(),
-        statsRes.json()
-      ]);
-
+      // Fetch accounts
+      const accountsRes = await fetch(`/api/accounts?userId=${user?.id}`);
+      if (!accountsRes.ok) throw new Error('Failed to fetch accounts');
+      const accountsData = await accountsRes.json();
       setAccounts(accountsData);
+
+      // Calculate total balance
+      const totalBalance = accountsData.reduce((sum: number, acc: Account) => sum + acc.balance, 0);
+
+      // Fetch recent transactions
+      const transactionsRes = await fetch(`/api/transactions?userId=${user?.id}&limit=5`);
+      if (!transactionsRes.ok) throw new Error('Failed to fetch transactions');
+      const transactionsData = await transactionsRes.json();
       setTransactions(transactionsData);
-      setStatistics(statsData);
+
+      // Calculate monthly statistics
+      const monthlyIncome = transactionsData
+        .filter((t: Transaction) => t.type === 'deposit' || (t.type === 'transfer' && t.to_account_id))
+        .reduce((sum: number, t: Transaction) => sum + t.amount, 0);
+
+      const monthlySpending = transactionsData
+        .filter((t: Transaction) => t.type === 'withdrawal' || (t.type === 'transfer' && t.from_account_id))
+        .reduce((sum: number, t: Transaction) => sum + t.amount, 0);
+
+      // Generate spending data for the chart
+      const today = new Date();
+      const spendingData = Array.from({ length: 30 }, (_, i) => {
+        const date = new Date(today);
+        date.setDate(date.getDate() - (29 - i));
+        return {
+          date: format(date, 'MMM dd'),
+          amount: transactionsData
+            .filter((t: Transaction) => 
+              new Date(t.created_at).toDateString() === date.toDateString() &&
+              (t.type === 'withdrawal' || (t.type === 'transfer' && t.from_account_id))
+            )
+            .reduce((sum: number, t: Transaction) => sum + t.amount, 0)
+        };
+      });
+
+      // Update statistics
+      setStatistics({
+        totalBalance,
+        monthlyIncome,
+        monthlySpending,
+        spendingData
+      });
 
     } catch (error) {
       console.error('Dashboard data fetch error:', error);
