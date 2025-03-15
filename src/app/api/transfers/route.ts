@@ -21,6 +21,19 @@ interface UserRow extends RowDataPacket {
   last_name: string;
 }
 
+const BLUE_BOX_QUOTES = [
+  "Like a serve that connects us, this transfer reaches its mark",
+  "Supporting each other's dreams, one transfer at a time",
+  "Growing stronger together, like Taiki and Chinatsu",
+  "A small step forward in our journey",
+  "Building connections, box by box",
+  "Like the perfect shot in badminton",
+  "Reaching across courts to support each other",
+  "Every transfer is a step toward our dreams",
+  "Connected by more than just transactions",
+  "Supporting your path to victory"
+];
+
 export async function POST(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
@@ -37,47 +50,36 @@ export async function POST(req: NextRequest) {
 
     const { fromAccountId, toAccountId: recipientUsername, amount, description } = body;
 
-    // Validate input
-    if (!fromAccountId) {
-      return NextResponse.json(
-        { error: "Source account is required" },
-        { status: 400 }
-      );
-    }
-
-    if (!recipientUsername) {
-      return NextResponse.json(
-        { error: "Recipient username is required" },
-        { status: 400 }
-      );
-    }
-
-    if (!amount || amount <= 0) {
-      return NextResponse.json(
-        { error: "Valid amount is required" },
-        { status: 400 }
-      );
-    }
+    // Start transaction
+    await query({ query: "START TRANSACTION" });
 
     try {
-      // First, find the recipient user
+      // Find recipient user
       const [recipientUser] = await query({
         query: "SELECT * FROM users WHERE username = ?",
         values: [recipientUsername],
       }) as UserRow[];
 
       if (!recipientUser) {
-        return NextResponse.json(
-          { error: "Recipient not found" },
-          { status: 404 }
-        );
+        throw new Error("Recipient not found");
       }
 
       if (recipientUser.id === user.id) {
-        return NextResponse.json(
-          { error: "Cannot transfer to yourself" },
-          { status: 400 }
-        );
+        throw new Error("Cannot transfer to yourself");
+      }
+
+      // Get sender's account
+      const [senderAccount] = await query({
+        query: "SELECT * FROM accounts WHERE id = ? AND user_id = ? AND status = 'active' FOR UPDATE",
+        values: [fromAccountId, user.id],
+      }) as AccountRow[];
+
+      if (!senderAccount) {
+        throw new Error("Source account not found or inactive");
+      }
+
+      if (senderAccount.balance < amount) {
+        throw new Error("Insufficient funds");
       }
 
       // Find recipient's primary account
@@ -87,114 +89,91 @@ export async function POST(req: NextRequest) {
           WHERE user_id = ? AND status = 'active'
           ORDER BY created_at ASC 
           LIMIT 1
+          FOR UPDATE
         `,
         values: [recipientUser.id],
       }) as AccountRow[];
 
       if (!recipientAccount) {
-        return NextResponse.json(
-          { error: "Recipient has no active account" },
-          { status: 404 }
-        );
+        throw new Error("Recipient has no active account");
       }
 
-      // Get sender's account
-      const [senderAccount] = await query({
-        query: "SELECT * FROM accounts WHERE id = ? AND user_id = ? AND status = 'active'",
-        values: [fromAccountId, user.id],
-      }) as AccountRow[];
+      // Generate reference number with Blue Box theme
+      const referenceNumber = `BX${generateReferenceNumber()}`;
+      const transactionId = uuidv4();
+      const randomQuote = BLUE_BOX_QUOTES[Math.floor(Math.random() * BLUE_BOX_QUOTES.length)];
 
-      if (!senderAccount) {
-        return NextResponse.json(
-          { error: "Source account not found or inactive" },
-          { status: 404 }
-        );
-      }
-
-      if (senderAccount.balance < amount) {
-        return NextResponse.json(
-          { error: "Insufficient funds" },
-          { status: 400 }
-        );
-      }
-
-      // Generate transaction reference
-      const referenceNumber = generateReferenceNumber();
-
-      // Create transaction record
+      // Create transaction record with Blue Box theme
       await query({
         query: `
           INSERT INTO transactions (
-            id,
-            from_account_id,
-            to_account_id,
-            amount,
-            type,
-            status,
-            description,
-            reference_number,
-            created_at
-          ) VALUES (?, ?, ?, ?, 'transfer', 'completed', ?, ?, CURRENT_TIMESTAMP)
+            id, from_account_id, to_account_id, 
+            amount, type, status, 
+            description, reference_number, created_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
         `,
         values: [
-          uuidv4(),
+          transactionId,
           senderAccount.id,
           recipientAccount.id,
           amount,
-          description || 'Transfer',
+          'transfer',
+          'completed',
+          description || 'Blue Box Transfer',
           referenceNumber
         ],
       });
 
-      // Update sender's balance
+      // Update balances
       await query({
         query: "UPDATE accounts SET balance = balance - ? WHERE id = ?",
         values: [amount, senderAccount.id],
       });
 
-      // Update recipient's balance
       await query({
         query: "UPDATE accounts SET balance = balance + ? WHERE id = ?",
         values: [amount, recipientAccount.id],
       });
 
-      // Create notifications
+      // Create themed notifications
       await query({
         query: `
-          INSERT INTO notifications (
-            id, 
-            user_id, 
-            title, 
-            message, 
-            type, 
-            is_read,
-            created_at
-          )
+          INSERT INTO notifications (id, user_id, title, message, type, created_at)
           VALUES 
-            (?, ?, 'Transfer Sent', ?, 'success', 0, CURRENT_TIMESTAMP),
-            (?, ?, 'Transfer Received', ?, 'success', 0, CURRENT_TIMESTAMP)
+            (?, ?, 'Blue Box Transfer', ?, 'success', CURRENT_TIMESTAMP),
+            (?, ?, 'Blue Box Received', ?, 'success', CURRENT_TIMESTAMP)
         `,
         values: [
           uuidv4(),
           user.id,
-          `You sent ${senderAccount.currency} ${amount.toLocaleString()} to @${recipientUser.username}`,
+          `${randomQuote}\nYou sent ${senderAccount.currency} ${amount.toLocaleString()} to @${recipientUser.username}`,
           uuidv4(),
           recipientUser.id,
-          `You received ${recipientAccount.currency} ${amount.toLocaleString()} from @${user.username}`
+          `${randomQuote}\nYou received ${recipientAccount.currency} ${amount.toLocaleString()} from @${user.username}`
         ],
       });
 
+      // Commit transaction
+      await query({ query: "COMMIT" });
+
       return NextResponse.json({
-        message: "Transfer successful",
+        message: "Blue Box Transfer successful",
         referenceNumber,
-        recipientName: `${recipientUser.first_name} ${recipientUser.last_name}`
+        recipientName: `${recipientUser.first_name} ${recipientUser.last_name}`,
+        quote: randomQuote
       });
 
     } catch (error) {
-      console.error("Transfer error:", error);
+      // Rollback on error
+      await query({ query: "ROLLBACK" });
+      console.error("Blue Box Transfer error:", error);
       return NextResponse.json(
-        { error: "Transfer failed. Please try again." },
-        { status: 500 }
+        { 
+          error: error instanceof Error 
+            ? error.message 
+            : "Transfer failed. Like in badminton, sometimes we need another serve.",
+        },
+        { status: 400 }
       );
     }
   } catch (error) {
