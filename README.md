@@ -10,7 +10,7 @@
   <img src="public/banking-hero.svg" alt="Siddhartha Bank Logo" width="280"/>
   
   <h2>Modern Banking Platform Demo</h2>
-  <p><em>"Managing your finances with the precision of Ichikawa's thoughts"</em></p>
+  <p><em>Secure, responsive, and feature-rich banking experience built with cutting-edge technologies</em></p>
   
   <br />
   
@@ -24,11 +24,6 @@
 
 <br />
 
-<div style="background-color: #1E40AF; border-radius: 8px; padding: 20px; color: white; margin: 20px 0;">
-  <h2 align="center">💙 Our Banking Philosophy 💙</h2>
-  <p align="center"><em>"Like Yamada's smile brightening Ichikawa's day, we aim to make your financial journey just as heartwarming."</em></p>
-</div>
-
 ## ✨ Features
 
 <table>
@@ -36,17 +31,17 @@
     <td width="50%" style="background-color: #DBEAFE; border-radius: 8px; padding: 15px;">
       <h3>🔐 Secure Authentication</h3>
       <ul>
-        <li>JWT-based authentication as reliable as Ichikawa's feelings for Yamada</li>
-        <li>Session management that never wavers</li>
-        <li>Password encryption stronger than Yamada's determination</li>
+        <li>JWT-based authentication</li>
+        <li>Session management</li>
+        <li>Password encryption</li>
       </ul>
     </td>
     <td width="50%" style="background-color: #DBEAFE; border-radius: 8px; padding: 15px;">
       <h3>💼 Account Management</h3>
       <ul>
-        <li>Multiple account types (as versatile as the library committee)</li>
-        <li>Real-time balance tracking (more accurate than Ichikawa's observations)</li>
-        <li>Transaction history that never forgets</li>
+        <li>Multiple account types (Savings, Current)</li>
+        <li>Real-time balance tracking</li>
+        <li>Transaction history</li>
       </ul>
     </td>
   </tr>
@@ -54,17 +49,17 @@
     <td style="background-color: #DBEAFE; border-radius: 8px; padding: 15px;">
       <h3>💸 Money Transfers</h3>
       <ul>
-        <li>Instant transfers between accounts (faster than Ichikawa's heartbeat near Yamada)</li>
-        <li>Scheduled payments (more reliable than the bookstore schedule)</li>
-        <li>Transaction categorization (organized like Yamada's photoshoots)</li>
+        <li>Instant transfers between accounts</li>
+        <li>Scheduled payments</li>
+        <li>Transaction categorization</li>
       </ul>
     </td>
     <td style="background-color: #DBEAFE; border-radius: 8px; padding: 15px;">
       <h3>📊 Dashboard Analytics</h3>
       <ul>
-        <li>Spending patterns (clearer than Ichikawa's internal monologues)</li>
-        <li>Income tracking (more consistent than Nanjou's mood)</li>
-        <li>Category-wise analysis (detailed as Adachi's manga drawings)</li>
+        <li>Spending patterns</li>
+        <li>Income tracking</li>
+        <li>Category-wise analysis</li>
       </ul>
     </td>
   </tr>
@@ -72,11 +67,10 @@
 
 <div style="background-color: #1E40AF; border-radius: 8px; padding: 15px; color: white; margin: 20px 0;">
   <h3 align="center">🎨 Modern UI/UX</h3>
-  <p align="center"><em>"Our interface transitions are smoother than Ichikawa's journey from dark thoughts to wholesome love."</em></p>
   <ul align="center" style="list-style-position: inside;">
-    <li>Responsive design (adapts like Yamada to any situation)</li>
-    <li>Dark mode support (for your inner Ichikawa)</li>
-    <li>Animated transitions (as heartwarming as BokuYaba's character development)</li>
+    <li>Responsive design for all devices</li>
+    <li>Dark mode support</li>
+    <li>Animated transitions</li>
   </ul>
 </div>
 
@@ -120,7 +114,7 @@
 </table>
 
 <div style="background-color: #1E40AF; border-radius: 8px; padding: 15px; color: white; margin: 20px 0;">
-  <p align="center"><em>"Our code is as neat as the library when Ichikawa and Yamada are on duty."</em></p>
+  <p align="center"><em>Built with industry-standard technologies for optimal performance and scalability</em></p>
 </div>
 
 <br />
@@ -129,7 +123,6 @@
 
 <div style="background-color: #DBEAFE; border-radius: 8px; padding: 20px; margin: 20px 0;">
   <h3 align="center">Step-by-step setup guide</h3>
-  <p align="center"><em>"Follow these steps as carefully as Ichikawa follows Yamada's social media updates!"</em></p>
 
 ### 1. Clone the repository
 
@@ -186,7 +179,7 @@ siddharthabank/
 └── prisma/           # Database schema
 ```
 
-<p align="center"><em>"Our project structure is more organized than the bookstore where Ichikawa first met Yamada."</em></p>
+<p align="center"><em>Organized architecture designed for maintainability and scalability</em></p>
 </div>
 
 <br />
@@ -194,8 +187,7 @@ siddharthabank/
 ## 🔒 Security Features
 
 <div style="background-color: #1E40AF; border-radius: 8px; padding: 15px; color: white; margin: 20px 0;">
-  <h3 align="center">Security You Can Trust</h3>
-  <p align="center"><em>"Our security is as intense as Ichikawa's protective instincts around Yamada."</em></p>
+  <h3 align="center">Enterprise-Grade Security</h3>
   
   <table align="center" style="margin: 0 auto; color: black;">
     <tr>
@@ -224,16 +216,15 @@ siddharthabank/
 ## 🎨 UI Components
 
 <div style="background-color: #DBEAFE; border-radius: 8px; padding: 20px; margin: 20px 0;">
-  <h3 align="center">Beautiful Components</h3>
-  <p align="center"><em>"Our UI components are as aesthetically pleasing as Yamada's modeling photos."</em></p>
+  <h3 align="center">Premium UI Components</h3>
 
   <ul align="center" style="list-style-position: inside;">
-    <li><strong>Forms</strong>: Custom, responsive form components with validation (as meticulous as Ichikawa's book organization)</li>
-    <li><strong>Navigation</strong>: Adaptive navigation with mobile support (as reliable as Yamada appearing at the bookstore)</li>
-    <li><strong>Charts</strong>: Interactive financial data visualization (more colorful than Adachi's illustrations)</li>
-    <li><strong>States</strong>: Elegant loading states and transitions (smoother than Ichikawa's character development)</li>
-    <li><strong>Notifications</strong>: Context-aware toast notifications (as timely as Moe's commentary)</li>
-    <li><strong>Modals</strong>: Accessible dialog components (as engaging as Yamada and Ichikawa's conversations)</li>
+    <li><strong>Forms</strong>: Custom, responsive form components with validation</li>
+    <li><strong>Navigation</strong>: Adaptive navigation with mobile support</li>
+    <li><strong>Charts</strong>: Interactive financial data visualization</li>
+    <li><strong>States</strong>: Elegant loading states and transitions</li>
+    <li><strong>Notifications</strong>: Context-aware toast notifications</li>
+    <li><strong>Modals</strong>: Accessible dialog components</li>
   </ul>
 </div>
 
@@ -244,7 +235,7 @@ siddharthabank/
 <div style="background-color: #1E40AF; border-radius: 8px; padding: 15px; color: white; margin: 20px 0;">
   <div align="center">
     <h3>Visual Preview</h3>
-    <p><em>"Coming soon! The platform is currently under active development - we're drawing it with the care Adachi puts into her manga!"</em></p>
+    <p><em>Coming soon! The platform is currently under active development.</em></p>
   </div>
 </div>
 
@@ -255,7 +246,7 @@ siddharthabank/
 <div style="background-color: #DBEAFE; border-radius: 8px; padding: 20px; margin: 20px 0;">
   <div align="center">
     <h3>About This Project</h3>
-    <p><em>"This project evolved like Ichikawa's feelings - from simple concepts to something beautiful."</em></p>
+    <p><em>A comprehensive demonstration of modern banking application development</em></p>
   </div>
 
   <p>This project was developed as a trial project for DevRoom, demonstrating:</p>
@@ -276,7 +267,6 @@ siddharthabank/
 
 <div style="background-color: #DBEAFE; border-radius: 8px; padding: 15px; margin: 20px 0;">
   <p align="center">This project is licensed under the MIT License - see the <a href="LICENSE">LICENSE</a> file for details.</p>
-  <p align="center"><em>"Our licensing is straightforward - no hidden feelings like early-series Ichikawa."</em></p>
 </div>
 
 <br />
@@ -286,7 +276,7 @@ siddharthabank/
 <div style="background-color: #1E40AF; border-radius: 8px; padding: 20px; color: white; margin: 20px 0;">
   <div align="center">
     <h3>Special Thanks</h3>
-    <p><em>"Supporting this project like the library committee supports the school."</em></p>
+    <p><em>With appreciation to the technologies that made this project possible</em></p>
 
     <a href="https://nextjs.org/" target="_blank" rel="noopener noreferrer">
       <img src="https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=next.js&logoColor=white" alt="Next.js" height="30" />
@@ -300,7 +290,6 @@ siddharthabank/
     <a href="https://www.mysql.com/" target="_blank" rel="noopener noreferrer">
       <img src="https://img.shields.io/badge/MySQL-4479A1?style=for-the-badge&logo=mysql&logoColor=white" alt="MySQL" height="30" />
     </a>
-    <p>And to "The Dangers in My Heart" for inspiring our development philosophy!</p>
   </div>
 </div>
 
@@ -308,4 +297,9 @@ siddharthabank/
 
 ---
 
-<div align="center" style="background-color: #DBEAFE; border-radius: 8px; padding: 20px; margin: 20px 0;"> <img src="public/banking-hero.svg" alt="Siddhartha Bank Logo" width="60" /> <h3>Siddhartha Bank</h3> <p>Developed with ❤️ by <a href="https://github.com/Sulcrus">Sulcrus</a></p> <p><em>"Creating financial solutions with the same dedication that Ichikawa shows in the library committee"</em></p> <p>Trial Project for DevRoom | Last Updated: 2025-03-15</p> <p style="font-style: italic; margin-top: 20px;"> "Just as Yamada and Ichikawa found unexpected connections in everyday moments,<br> we hope our platform creates meaningful connections between you and your finances." </p> </div> <div style="background-color: #1E40AF; border-radius: 8px; padding: 15px; color: white; margin: 20px 0;"> <p align="center"> <strong>Fun Fact:</strong> Like how Ichikawa carefully arranges books in the library,<br> our code repositories are meticulously organized for optimal performance! </p> </div>
+<div align="center" style="background-color: #DBEAFE; border-radius: 8px; padding: 20px; margin: 20px 0;">
+  <img src="public/banking-hero.svg" alt="Siddhartha Bank Logo" width="60" />
+  <h3>Siddhartha Bank</h3>
+  <p>Developed with ❤️ by <a href="https://github.com/Sulcrus">Sulcrus</a></p>
+  <p><em>Trial Project for DevRoom | Last Updated: 2025-03-15</em></p>
+</div>
