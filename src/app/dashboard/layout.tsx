@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import Navigation from "@/components/Navigation";
 import useUserStore from "@/store/useUserStore";
 import { LoadingProfile, UserProfile, ErrorProfile } from "@/components/dashboard/UserProfile";
+import { useTheme } from "next-themes";
 
 export default function DashboardLayout({
   children,
@@ -13,6 +14,19 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const { refreshUserData } = useUserStore();
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  
+  // After mounting, we can access the theme
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+  
+  useEffect(() => {
+    // Refresh user data when dashboard loads
+    refreshUserData();
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">

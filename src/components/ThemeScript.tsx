@@ -7,14 +7,33 @@ export function ThemeScript() {
             (function() {
               // Theme initialization to prevent flashing
               function getThemePreference() {
-                if (typeof localStorage !== 'undefined' && localStorage.getItem('theme')) {
-                  return localStorage.getItem('theme');
+                if (typeof localStorage !== 'undefined') {
+                  if (localStorage.getItem('theme')) {
+                    return localStorage.getItem('theme');
+                  }
+                  
+                  if (localStorage.getItem('theme-storage')) {
+                    try {
+                      const themeStorage = JSON.parse(localStorage.getItem('theme-storage') || '{}');
+                      if (themeStorage.state && themeStorage.state.theme) {
+                        return themeStorage.state.theme;
+                      }
+                    } catch (e) {
+                      console.error('Error parsing theme storage', e);
+                    }
+                  }
                 }
+                
                 return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
               }
               
               const theme = getThemePreference();
-              document.documentElement.classList.add(theme);
+              
+              if (theme === 'dark') {
+                document.documentElement.classList.add('dark');
+              } else {
+                document.documentElement.classList.remove('dark');
+              }
             })();
           `,
         }}

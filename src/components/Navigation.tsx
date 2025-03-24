@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import { useEffect } from "react";
 import {
   HomeIcon,
   CreditCardIcon,
@@ -27,7 +28,13 @@ const menuItems = [
 
 export default function Navigation() {
   const pathname = usePathname();
-  const { user, logout } = useUserStore();
+  const router = useRouter();
+  const { user, logout, refreshUserData } = useUserStore();
+
+  // Refresh user data when component mounts
+  useEffect(() => {
+    refreshUserData();
+  }, [refreshUserData]);
 
   return (
     <aside className="fixed top-0 left-0 h-screen w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800">

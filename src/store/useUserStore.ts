@@ -23,6 +23,7 @@ interface UserState {
   setError: (error: string | null) => void;
   fetchUser: () => Promise<void>;
   logout: () => Promise<void>;
+  refreshUserData: () => Promise<void>;
 }
 
 type UserStoreWithMiddleware = StateCreator<
@@ -32,7 +33,7 @@ type UserStoreWithMiddleware = StateCreator<
   UserState
 >;
 
-const userStore: UserStoreWithMiddleware = (set) => ({
+const userStore: UserStoreWithMiddleware = (set, get) => ({
   user: null,
   loading: false,
   error: null,
@@ -67,6 +68,11 @@ const userStore: UserStoreWithMiddleware = (set) => ({
     } finally {
       set({ loading: false });
     }
+  },
+
+  refreshUserData: async () => {
+    // Clear cache to ensure fresh data
+    await get().fetchUser();
   },
 
   logout: async () => {
