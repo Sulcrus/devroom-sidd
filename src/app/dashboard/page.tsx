@@ -54,16 +54,31 @@ export default function DashboardPage() {
   useEffect(() => {
     // Calculate statistics from the fetched data
     const totalBalance = accounts.reduce((sum, acc) => sum + (acc.balance || 0), 0);
+    
+    // Fix: Properly categorize income and spending
     const monthlyIncome = transactions
-      .filter(t => t.type === 'deposit' || t.type === 'transfer')
+      .filter(t => {
+        // Only count deposits and incoming transfers as income
+        return (t.type === 'deposit' || 
+               (t.type === 'transfer' && t.to_account_id && 
+                accounts.some(acc => acc.id === t.to_account_id)));
+      })
       .reduce((sum, t) => sum + (t.amount || 0), 0);
+    
     const monthlySpending = transactions
-      .filter(t => t.type === 'withdrawal')
+      .filter(t => {
+        // Count withdrawals and outgoing transfers as spending
+        return (t.type === 'withdrawal' || 
+               (t.type === 'transfer' && t.from_account_id && 
+                accounts.some(acc => acc.id === t.from_account_id)));
+      })
       .reduce((sum, t) => sum + (t.amount || 0), 0);
 
     // Generate spending data for the chart
     const spendingData = transactions
-      .filter(t => t.type === 'withdrawal')
+      .filter(t => t.type === 'withdrawal' || 
+               (t.type === 'transfer' && t.from_account_id && 
+                accounts.some(acc => acc.id === t.from_account_id)))
       .reduce((acc, t) => {
         const date = format(new Date(t.created_at), 'MMM dd');
         const existing = acc.find(d => d.date === date);
@@ -73,10 +88,8 @@ export default function DashboardPage() {
           acc.push({ date, amount: t.amount || 0 });
         }
         return acc;
-      }, [] as { date: string; amount: number }[])
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      }, [] as { date: string; amount: number }[]);
 
-    // Update statistics
     setStatistics({
       totalBalance,
       monthlyIncome,
@@ -111,6 +124,50 @@ export default function DashboardPage() {
     }
   };
 
+  const getTransactionAmount = (transaction: Transaction) => {
+    // For transfers, check if the user is sender or receiver
+    if (transaction.type === 'transfer') {
+      // If user's account is the sender, show negative amount
+      if (accounts.some(acc => acc.id === transaction.from_account_id)) {
+        return `-$${transaction.amount.toLocaleString()}`;
+      }
+      // If user's account is the receiver, show positive amount
+      if (accounts.some(acc => acc.id === transaction.to_account_id)) {
+        return `+$${transaction.amount.toLocaleString()}`;
+      }
+    }
+    
+    // For deposits and withdrawals
+    return transaction.type === 'deposit' 
+      ? `+$${transaction.amount.toLocaleString()}`
+      : `-$${transaction.amount.toLocaleString()}`;
+  };
+
+  const getTransactionIcon = (transaction: Transaction) => {
+    if (transaction.type === 'transfer') {
+      // Show down arrow if sending, up arrow if receiving
+      return accounts.some(acc => acc.id === transaction.from_account_id) 
+        ? <ArrowDownIcon className="w-5 h-5 text-rose-600" />
+        : <ArrowUpIcon className="w-5 h-5 text-emerald-600" />;
+    }
+    
+    return transaction.type === 'deposit'
+      ? <ArrowUpIcon className="w-5 h-5 text-emerald-600" />
+      : <ArrowDownIcon className="w-5 h-5 text-rose-600" />;
+  };
+
+  const getTransactionStyle = (transaction: Transaction) => {
+    if (transaction.type === 'transfer') {
+      return accounts.some(acc => acc.id === transaction.from_account_id)
+        ? 'text-rose-600'
+        : 'text-emerald-600';
+    }
+    
+    return transaction.type === 'deposit'
+      ? 'text-emerald-600'
+      : 'text-rose-600';
+  };
+
   if (loading) {
     return (
       <div className="p-8 animate-pulse">
@@ -125,8 +182,8 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="p-8">
-      <motion.div variants={container} initial="hidden" animate="show" className="space-y-8">
+    <div className="p-8 max-w-7xl mx-auto">
+      <motion.div variants={container} initial="hidden" animate="show" className="space-y-6">
         {/* Welcome Section */}
         <motion.div variants={item} className="flex justify-between items-center">
           <div>
@@ -204,56 +261,82 @@ export default function DashboardPage() {
           </div>
         </motion.div>
 
+        {/* Recent Activity Card */}
+        <motion.div variants={item}>
+          <Card>
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <Title>Recent Activity</Title>
+                <Text>Your latest transactions</Text>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setHideBalances(!hideBalances)}
+                  className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 transition-colors"
+                >
+                  {hideBalances ? (
+                    <EyeIcon className="w-5 h-5" />
+                  ) : (
+                    <EyeSlashIcon className="w-5 h-5" />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              {transactions.slice(0, 5).map((transaction) => {
+                // Determine if this is an outgoing transfer
+                const isOutgoingTransfer = transaction.type === 'transfer' && 
+                  accounts.some(acc => acc.id === transaction.from_account_id);
+                
+                // Determine if this is an incoming transfer
+                const isIncomingTransfer = transaction.type === 'transfer' && 
+                  accounts.some(acc => acc.id === transaction.to_account_id);
+
+                return (
+                  <div
+                    key={transaction.id}
+                    className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-lg ${
+                        transaction.type === 'deposit' || isIncomingTransfer
+                          ? 'bg-emerald-100 dark:bg-emerald-900/30' 
+                          : 'bg-rose-100 dark:bg-rose-900/30'
+                      }`}>
+                        {transaction.type === 'deposit' || isIncomingTransfer ? (
+                          <ArrowUpIcon className="w-5 h-5 text-emerald-600" />
+                        ) : (
+                          <ArrowDownIcon className="w-5 h-5 text-rose-600" />
+                        )}
+                      </div>
+                      <div>
+                        <Text>{transaction.description}</Text>
+                        <Text className="text-xs text-gray-500">
+                          {format(new Date(transaction.created_at), 'MMM d, yyyy')}
+                        </Text>
+                      </div>
+                    </div>
+                    <Text className={
+                      transaction.type === 'deposit' || isIncomingTransfer
+                        ? 'text-emerald-600' 
+                        : 'text-rose-600'
+                    }>
+                      {hideBalances 
+                        ? '••••' 
+                        : `${transaction.type === 'deposit' || isIncomingTransfer ? '+' : '-'}$${transaction.amount.toLocaleString()}`
+                      }
+                    </Text>
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
+        </motion.div>
+
         {/* Charts and Transactions */}
         <motion.div variants={item}>
           <Grid numItemsMd={2} className="gap-6">
-            <Col>
-              <Card>
-                <Title>Recent Activity</Title>
-                <div className="mt-6 space-y-4">
-                  {Array.isArray(transactions) && transactions.length > 0 ? (
-                    transactions.map((transaction) => (
-                      <div
-                        key={transaction.id}
-                        className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className={`p-2 rounded-lg ${
-                            transaction.type === 'deposit' || transaction.type === 'transfer'
-                              ? 'bg-emerald-100 dark:bg-emerald-900/30' 
-                              : 'bg-rose-100 dark:bg-rose-900/30'
-                          }`}>
-                            {transaction.type === 'deposit' || transaction.type === 'transfer' ? 
-                              <ArrowUpIcon className="w-5 h-5 text-emerald-600" /> :
-                              <ArrowDownIcon className="w-5 h-5 text-rose-600" />
-                            }
-                          </div>
-                          <div>
-                            <Text>{transaction.description}</Text>
-                            <Text className="text-xs text-gray-500">
-                              {format(new Date(transaction.created_at), 'MMM d, yyyy')}
-                            </Text>
-                          </div>
-                        </div>
-                        <Text className={
-                          transaction.type === 'deposit' || transaction.type === 'transfer'
-                            ? 'text-emerald-600' 
-                            : 'text-rose-600'
-                        }>
-                          {transaction.type === 'deposit' || transaction.type === 'transfer' ? '+' : '-'}
-                          {hideBalances ? '••••' : `$${transaction.amount.toLocaleString()}`}
-                        </Text>
-                      </div>
-                    ))
-                  ) : (
-                    <Text className="text-gray-500 text-center py-4">
-                      No recent transactions
-                    </Text>
-                  )}
-                </div>
-              </Card>
-            </Col>
-
             <Col>
               <Card>
                 <Title>Spending Overview</Title>
