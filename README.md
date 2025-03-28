@@ -145,8 +145,7 @@ yarn install
 # Create .env file with your database credentials
 cp .env.example .env
 
-# Run migrations
-npx prisma migrate dev
+import schema.sql in your database.
 ```
 
 ### 4. Run the development server
