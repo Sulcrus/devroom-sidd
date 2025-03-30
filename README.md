@@ -28,7 +28,7 @@
 
 <table>
   <tr>
-    <td width="50%" style="background-color: #DBEAFE; border-radius: 8px; padding: 15px;">
+    <td width="50%">
       <h3>🔐 Secure Authentication</h3>
       <ul>
         <li>JWT-based authentication</li>
@@ -36,7 +36,7 @@
         <li>Password encryption</li>
       </ul>
     </td>
-    <td width="50%" style="background-color: #DBEAFE; border-radius: 8px; padding: 15px;">
+    <td width="50%">
       <h3>💼 Account Management</h3>
       <ul>
         <li>Multiple account types (Savings, Current)</li>
@@ -46,7 +46,7 @@
     </td>
   </tr>
   <tr>
-    <td style="background-color: #DBEAFE; border-radius: 8px; padding: 15px;">
+    <td>
       <h3>💸 Money Transfers</h3>
       <ul>
         <li>Instant transfers between accounts</li>
@@ -54,7 +54,7 @@
         <li>Transaction categorization</li>
       </ul>
     </td>
-    <td style="background-color: #DBEAFE; border-radius: 8px; padding: 15px;">
+    <td>
       <h3>📊 Dashboard Analytics</h3>
       <ul>
         <li>Spending patterns</li>
@@ -78,40 +78,13 @@
 
 ## 🛠️ Tech Stack
 
-<table>
-  <tr>
-    <th style="background-color: #2563EB; color: white; border-radius: 8px 0 0 0;">Frontend</th>
-    <th style="background-color: #2563EB; color: white;">Backend</th>
-    <th style="background-color: #2563EB; color: white; border-radius: 0 8px 0 0;">Development</th>
-  </tr>
-  <tr>
-    <td style="background-color: #DBEAFE; padding: 15px;">
-      <ul>
-        <li>Next.js 14</li>
-        <li>TypeScript</li>
-        <li>Tailwind CSS</li>
-        <li>Framer Motion</li>
-        <li>Tremor Charts</li>
-      </ul>
-    </td>
-    <td style="background-color: #DBEAFE; padding: 15px;">
-      <ul>
-        <li>Next.js API Routes</li>
-        <li>MySQL</li>
-        <li>JWT Authentication</li>
-        <li>bcrypt</li>
-      </ul>
-    </td>
-    <td style="background-color: #DBEAFE; padding: 15px;">
-      <ul>
-        <li>ESLint</li>
-        <li>Prettier</li>
-        <li>Husky</li>
-        <li>TypeScript</li>
-      </ul>
-    </td>
-  </tr>
-</table>
+- **Frontend**: Next.js 14, React, TypeScript, Tailwind CSS, Framer Motion
+- **Backend**: Next.js API Routes
+- **Database**: MySQL
+- **Authentication**: JWT, bcrypt
+- **State Management**: Zustand
+- **Charts & UI**: Tremor, Headless UI
+- **Styling**: Tailwind CSS, CSS Modules
 
 <div style="background-color: #1E40AF; border-radius: 8px; padding: 15px; color: white; margin: 20px 0;">
   <p align="center"><em>Built with industry-standard technologies for optimal performance and scalability</em></p>
@@ -121,17 +94,22 @@
 
 ## 🚀 Getting Started
 
-<div style="background-color: #DBEAFE; border-radius: 8px; padding: 20px; margin: 20px 0;">
-  <h3 align="center">Step-by-step setup guide</h3>
+### Prerequisites
 
-### 1. Clone the repository
+- Node.js 18+ 
+- MySQL 8.0+ or phpMyAdmin
+- Git
+
+### Setup Instructions
+
+1. **Clone the repository**
 
 ```bash
-git clone https://github.com/Sulcrus/siddharthabank.git
+git clone https://github.com/yourusername/siddharthabank.git
 cd siddharthabank
 ```
 
-### 2. Install dependencies
+2. **Install dependencies**
 
 ```bash
 npm install
@@ -139,17 +117,47 @@ npm install
 yarn install
 ```
 
-### 3. Set up MySQL database
+3. **Set up the database**
+
+#### Option A: Using MySQL Command Line
+
+Create a MySQL database and run the SQL script in `schema.sql` to set up the required tables:
 
 ```bash
-# Create .env file with your database credentials
-cp .env.example .env
-
-# Run migrations
-npx prisma migrate dev
+mysql -u your_username -p your_database_name < schema.sql
 ```
 
-### 4. Run the development server
+#### Option B: Using phpMyAdmin
+
+1. Open phpMyAdmin in your browser
+2. Create a new database (e.g., `siddharthabank`)
+3. Select the newly created database
+4. Click on the "Import" tab
+5. Click "Choose File" and select the `schema.sql` file from the project
+6. Click "Go" to import the database schema
+
+4. **Configure environment variables**
+
+Create a `.env.local` file in the root directory with the following variables:
+
+```
+# IMPORTANT: Generate a unique JWT secret for your installation
+# You can use this command: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+JWT_SECRET=generate_a_unique_random_string_here
+
+# Database Configuration - Update with your own values
+MYSQL_HOST=localhost
+MYSQL_USER=your_mysql_username
+MYSQL_PASSWORD=your_mysql_password
+MYSQL_DATABASE=siddharthabank
+
+# Optional Configuration
+NODE_ENV=development
+```
+
+> ⚠️ **IMPORTANT**: Always use a unique JWT_SECRET for each installation. Never reuse JWT secrets between different installations or environments.
+
+5. **Run the development server**
 
 ```bash
 npm run dev
@@ -157,11 +165,40 @@ npm run dev
 yarn dev
 ```
 
-### 5. Open [http://localhost:3000](http://localhost:3000)
+6. **Access the application**
 
-</div>
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-<br />
+7. **Create a test user**
+
+Register a new account through the application's registration page.
+
+### Troubleshooting Common Issues
+
+#### Database Connection Issues
+
+If you encounter database connection errors:
+
+1. Verify your database credentials in `.env.local`
+2. Ensure your MySQL server is running
+3. Check that the database exists and has the correct tables
+4. If using a remote database, ensure the host allows connections from your IP
+
+#### JWT Authentication Issues
+
+If you experience login problems or "unauthorized" errors:
+
+1. Make sure you're using a unique JWT_SECRET in your `.env.local` file
+2. Clear your browser cookies and try logging in again
+3. Check that the sessions table in your database is properly created
+
+#### Persistent Login Issues
+
+If you're still experiencing issues with authentication:
+
+1. Clear your browser's local storage and cookies
+2. Restart the development server
+3. Ensure you're using the latest code from the repository
 
 ## 📁 Project Structure
 
@@ -172,11 +209,11 @@ siddharthabank/
 ├── src/
 │   ├── app/             # Next.js 14 App Router
 │   ├── components/      # Reusable components
-│   ├── lib/            # Utilities and helpers
-│   ├── types/          # TypeScript types
-│   └── providers/      # Context providers
-├── public/            # Static assets
-└── prisma/           # Database schema
+│   ├── lib/             # Utilities and helpers
+│   ├── types/           # TypeScript types
+│   └── providers/       # Context providers
+├── public/              # Static assets
+└── schema.sql           # Database schema
 ```
 
 <p align="center"><em>Organized architecture designed for maintainability and scalability</em></p>
@@ -186,119 +223,55 @@ siddharthabank/
 
 ## 🔒 Security Features
 
-<div style="background-color: #1E40AF; border-radius: 8px; padding: 15px; color: white; margin: 20px 0;">
-  <h3 align="center">Enterprise-Grade Security</h3>
-  
-  <table align="center" style="margin: 0 auto; color: black;">
-    <tr>
-      <td align="center" style="background-color: #DBEAFE; border-radius: 8px; padding: 10px;"><h3>🔑</h3></td>
-      <td style="background-color: white; border-radius: 8px; padding: 10px;">Password hashing with bcrypt</td>
-      <td align="center" style="background-color: #DBEAFE; border-radius: 8px; padding: 10px;"><h3>🔒</h3></td>
-      <td style="background-color: white; border-radius: 8px; padding: 10px;">JWT token authentication</td>
-    </tr>
-    <tr>
-      <td align="center" style="background-color: #DBEAFE; border-radius: 8px; padding: 10px;"><h3>🍪</h3></td>
-      <td style="background-color: white; border-radius: 8px; padding: 10px;">HTTP-only cookies</td>
-      <td align="center" style="background-color: #DBEAFE; border-radius: 8px; padding: 10px;"><h3>🛡️</h3></td>
-      <td style="background-color: white; border-radius: 8px; padding: 10px;">SQL injection prevention</td>
-    </tr>
-    <tr>
-      <td align="center" style="background-color: #DBEAFE; border-radius: 8px; padding: 10px;"><h3>🔐</h3></td>
-      <td style="background-color: white; border-radius: 8px; padding: 10px;">XSS protection</td>
-      <td align="center" style="background-color: #DBEAFE; border-radius: 8px; padding: 10px;"><h3>🚨</h3></td>
-      <td style="background-color: white; border-radius: 8px; padding: 10px;">CSRF protection</td>
-    </tr>
-  </table>
-</div>
+- **Password Hashing**: All passwords are hashed using bcrypt
+- **JWT Authentication**: Secure token-based authentication
+- **HTTP-Only Cookies**: Prevents client-side access to tokens
+- **Session Management**: Server-side session validation
+- **Input Validation**: Prevents SQL injection and XSS attacks
 
-<br />
+## 🧪 Database Schema
 
-## 🎨 UI Components
+The application uses the following main tables:
 
-<div style="background-color: #DBEAFE; border-radius: 8px; padding: 20px; margin: 20px 0;">
-  <h3 align="center">Premium UI Components</h3>
+- **users**: Stores user information
+- **accounts**: Manages bank accounts
+- **transactions**: Records all financial transactions
+- **sessions**: Handles user authentication sessions
+- **notifications**: Stores user notifications
 
-  <ul align="center" style="list-style-position: inside;">
-    <li><strong>Forms</strong>: Custom, responsive form components with validation</li>
-    <li><strong>Navigation</strong>: Adaptive navigation with mobile support</li>
-    <li><strong>Charts</strong>: Interactive financial data visualization</li>
-    <li><strong>States</strong>: Elegant loading states and transitions</li>
-    <li><strong>Notifications</strong>: Context-aware toast notifications</li>
-    <li><strong>Modals</strong>: Accessible dialog components</li>
-  </ul>
-</div>
-
-<br />
+For the complete schema, refer to the `schema.sql` file.
 
 ## 📱 Screenshots
 
-<div style="background-color: #1E40AF; border-radius: 8px; padding: 15px; color: white; margin: 20px 0;">
-  <div align="center">
-    <h3>Visual Preview</h3>
-    <p><em>Coming soon! The platform is currently under active development.</em></p>
-  </div>
+<div align="center">
+  <p><em>Coming soon! The platform is currently under active development.</em></p>
 </div>
 
-<br />
+## 🤝 Contributing
 
-## 🧪 Trial Project Information
+Contributions are welcome! Please feel free to submit a Pull Request.
 
-<div style="background-color: #DBEAFE; border-radius: 8px; padding: 20px; margin: 20px 0;">
-  <div align="center">
-    <h3>About This Project</h3>
-    <p><em>A comprehensive demonstration of modern banking application development</em></p>
-  </div>
-
-  <p>This project was developed as a trial project for DevRoom, demonstrating:</p>
-
-  <ul>
-    <li>✅ Modern web development practices</li>
-    <li>✅ Clean code architecture</li>
-    <li>✅ Secure authentication implementation</li>
-    <li>✅ Responsive UI/UX design</li>
-    <li>✅ Real-time data handling</li>
-    <li>✅ Database management</li>
-  </ul>
-</div>
-
-<br />
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ## 📄 License
 
-<div style="background-color: #DBEAFE; border-radius: 8px; padding: 15px; margin: 20px 0;">
-  <p align="center">This project is licensed under the MIT License - see the <a href="LICENSE">LICENSE</a> file for details.</p>
-</div>
-
-<br />
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## 🙏 Acknowledgments
 
-<div style="background-color: #1E40AF; border-radius: 8px; padding: 20px; color: white; margin: 20px 0;">
-  <div align="center">
-    <h3>Special Thanks</h3>
-    <p><em>With appreciation to the technologies that made this project possible</em></p>
-    <a href="https://nextjs.org/" target="_blank" rel="noopener noreferrer">
-      <img src="https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=next.js&logoColor=white" alt="Next.js" height="30" />
-    </a>
-    <a href="https://tailwindcss.com/" target="_blank" rel="noopener noreferrer">
-      <img src="https://img.shields.io/badge/Tailwind%20CSS-06B6D4?style=for-the-badge&logo=tailwind-css&logoColor=white" alt="Tailwind CSS" height="30" />
-    </a>
-    <a href="https://www.tremor.so/" target="_blank" rel="noopener noreferrer">
-      <img src="https://img.shields.io/badge/Tremor-3178C6?style=for-the-badge&logoColor=white" alt="Tremor" height="30" />
-    </a>
-    <a href="https://www.mysql.com/" target="_blank" rel="noopener noreferrer">
-      <img src="https://img.shields.io/badge/MySQL-4479A1?style=for-the-badge&logo=mysql&logoColor=white" alt="MySQL" height="30" />
-    </a>
-  </div>
-</div>
-
-<br />
+- Next.js team for the amazing framework
+- Tailwind CSS for the utility-first CSS framework
+- Tremor for the beautiful dashboard components
+- All open-source contributors whose libraries made this project possible
 
 ---
 
-<div align="center" style="background-color: #DBEAFE; border-radius: 8px; padding: 20px; margin: 20px 0;">
+<div align="center">
   <img src="public/banking-hero.svg" alt="Siddhartha Bank Logo" width="60" />
   <h3>Siddhartha Bank</h3>
-  <p>Developed with ❤️ by <a href="https://github.com/Sulcrus">Sulcrus</a></p>
-  <p><em>Trial Project for DevRoom | Last Updated: 2025-03-15</em></p>
+  <p>Developed with ❤️</p>
 </div>
