@@ -1,11 +1,12 @@
 import mysql from 'mysql2/promise';
+import config from './config';
 
-// Create a pool using environment variables
+// Create a pool using environment variables from config
 const pool = mysql.createPool({
-  host: process.env.MYSQL_HOST,
-  user: process.env.MYSQL_USER,
-  password: process.env.MYSQL_PASSWORD,
-  database: process.env.MYSQL_DATABASE,
+  host: config.database.host,
+  user: config.database.user,
+  password: config.database.password,
+  database: config.database.name,
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0
@@ -30,10 +31,10 @@ export async function transaction<T>(
   callback: (connection: mysql.Connection) => Promise<T>
 ): Promise<T> {
   const connection = await mysql.createConnection({
-    host: process.env.MYSQL_HOST,
-    user: process.env.MYSQL_USER,
-    password: process.env.MYSQL_PASSWORD,
-    database: process.env.MYSQL_DATABASE,
+    host: config.database.host,
+    user: config.database.user,
+    password: config.database.password,
+    database: config.database.name,
   });
 
   try {

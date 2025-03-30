@@ -146,10 +146,10 @@ Create a `.env.local` file in the root directory with the following variables:
 JWT_SECRET=generate_a_unique_random_string_here
 
 # Database Configuration - Update with your own values
-MYSQL_HOST=localhost
-MYSQL_USER=your_mysql_username
-MYSQL_PASSWORD=your_mysql_password
-MYSQL_DATABASE=siddharthabank
+DATABASE_HOST=localhost
+DATABASE_USER=your_mysql_username
+DATABASE_PASSWORD=your_mysql_password
+DATABASE_NAME=siddharthabank
 
 # Optional Configuration
 NODE_ENV=development

@@ -1,5 +1,5 @@
 -- Users table
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
   id VARCHAR(36) PRIMARY KEY,
   username VARCHAR(50) UNIQUE NOT NULL,
   first_name VARCHAR(50) NOT NULL,
@@ -14,8 +14,22 @@ CREATE TABLE users (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
+-- Addresses table
+CREATE TABLE IF NOT EXISTS addresses (
+  id VARCHAR(36) PRIMARY KEY,
+  user_id VARCHAR(36) NOT NULL,
+  street VARCHAR(255),
+  city VARCHAR(100),
+  state VARCHAR(100),
+  postal_code VARCHAR(20),
+  country VARCHAR(100) DEFAULT 'Nepal',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
 -- Accounts table
-CREATE TABLE accounts (
+CREATE TABLE IF NOT EXISTS accounts (
   id VARCHAR(36) PRIMARY KEY,
   user_id VARCHAR(36) NOT NULL,
   account_number VARCHAR(20) UNIQUE NOT NULL,
@@ -29,7 +43,7 @@ CREATE TABLE accounts (
 );
 
 -- Monthly Statistics table
-CREATE TABLE monthly_statistics (
+CREATE TABLE IF NOT EXISTS monthly_statistics (
   id VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
   user_id VARCHAR(36) NOT NULL,
   type ENUM('income', 'spending') NOT NULL,
@@ -38,69 +52,93 @@ CREATE TABLE monthly_statistics (
   year INT NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-  UNIQUE KEY unique_monthly_stat (user_id, type, month, year)
-);
-
--- Transaction Categories table
-CREATE TABLE transaction_categories (
-  id VARCHAR(36) PRIMARY KEY,
-  name VARCHAR(50) NOT NULL,
-  icon VARCHAR(50),
-  color VARCHAR(20),
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Transfers table
-CREATE TABLE transfers (
-  id VARCHAR(36) PRIMARY KEY,
-  reference_number VARCHAR(20) NOT NULL,
-  from_account_id VARCHAR(36) NOT NULL,
-  to_account_id VARCHAR(36) NOT NULL,
-  amount DECIMAL(15, 2) NOT NULL,
-  description TEXT,
-  category_id VARCHAR(36),
-  status ENUM('pending', 'completed', 'failed') NOT NULL DEFAULT 'pending',
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  FOREIGN KEY (from_account_id) REFERENCES accounts(id) ON DELETE RESTRICT,
-  FOREIGN KEY (to_account_id) REFERENCES accounts(id) ON DELETE RESTRICT,
-  FOREIGN KEY (category_id) REFERENCES transaction_categories(id) ON DELETE SET NULL
-);
-
--- Sessions table
-CREATE TABLE sessions (
-  id VARCHAR(36) PRIMARY KEY,
-  user_id VARCHAR(36) NOT NULL,
-  token TEXT NOT NULL,
-  expires_at TIMESTAMP NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
+-- Transaction Categories table
+CREATE TABLE IF NOT EXISTS transaction_categories (
+  id VARCHAR(36) PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  icon VARCHAR(50),
+  color VARCHAR(50),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
 -- Notifications table
-CREATE TABLE notifications (
+CREATE TABLE IF NOT EXISTS notifications (
   id VARCHAR(36) PRIMARY KEY,
   user_id VARCHAR(36) NOT NULL,
   title VARCHAR(255) NOT NULL,
   message TEXT NOT NULL,
   type ENUM('success', 'warning', 'error', 'info') NOT NULL,
-  read BOOLEAN DEFAULT FALSE,
+  `read` BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
 -- Transactions table
-CREATE TABLE transactions (
+CREATE TABLE IF NOT EXISTS transactions (
   id VARCHAR(36) PRIMARY KEY,
-  from_account_id VARCHAR(36) NOT NULL,
-  to_account_id VARCHAR(36) NOT NULL,
+  from_account_id VARCHAR(36),
+  to_account_id VARCHAR(36),
   amount DECIMAL(15, 2) NOT NULL,
   type ENUM('transfer', 'deposit', 'withdrawal') NOT NULL,
   status ENUM('pending', 'completed', 'failed') NOT NULL DEFAULT 'pending',
   description TEXT,
   reference_number VARCHAR(20) NOT NULL,
+  category_id VARCHAR(36),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (from_account_id) REFERENCES accounts(id),
-  FOREIGN KEY (to_account_id) REFERENCES accounts(id)
-); 
+  FOREIGN KEY (from_account_id) REFERENCES accounts(id) ON DELETE SET NULL,
+  FOREIGN KEY (to_account_id) REFERENCES accounts(id) ON DELETE SET NULL,
+  FOREIGN KEY (category_id) REFERENCES transaction_categories(id) ON DELETE SET NULL
+);
+
+-- Transfers table
+CREATE TABLE IF NOT EXISTS transfers (
+  id VARCHAR(36) PRIMARY KEY,
+  from_account_id VARCHAR(36) NOT NULL,
+  to_account_id VARCHAR(36) NOT NULL,
+  amount DECIMAL(15, 2) NOT NULL,
+  status ENUM('pending', 'completed', 'failed') NOT NULL DEFAULT 'pending',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (from_account_id) REFERENCES accounts(id) ON DELETE CASCADE,
+  FOREIGN KEY (to_account_id) REFERENCES accounts(id) ON DELETE CASCADE
+);
+
+-- Payments table
+CREATE TABLE IF NOT EXISTS payments (
+  id VARCHAR(36) PRIMARY KEY,
+  user_id VARCHAR(36) NOT NULL,
+  account_id VARCHAR(36) NOT NULL,
+  amount DECIMAL(15, 2) NOT NULL,
+  type VARCHAR(50) NOT NULL,
+  reference_number VARCHAR(20) NOT NULL,
+  status ENUM('pending', 'completed', 'failed') NOT NULL DEFAULT 'pending',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE
+);
+
+-- Refresh Tokens table
+CREATE TABLE IF NOT EXISTS refresh_tokens (
+  id VARCHAR(36) PRIMARY KEY,
+  user_id VARCHAR(36) NOT NULL,
+  token VARCHAR(255) NOT NULL,
+  expires_at TIMESTAMP NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Insert default transaction categories
+INSERT IGNORE INTO transaction_categories (id, name, icon, color) VALUES
+  (UUID(), 'Food & Dining', 'utensils', 'emerald'),
+  (UUID(), 'Shopping', 'shopping-bag', 'rose'),
+  (UUID(), 'Housing', 'home', 'amber'),
+  (UUID(), 'Transportation', 'car', 'blue'),
+  (UUID(), 'Entertainment', 'film', 'indigo'),
+  (UUID(), 'Healthcare', 'heart', 'purple'),
+  (UUID(), 'Education', 'book', 'cyan'),
+  (UUID(), 'Utilities', 'lightbulb', 'yellow'),
+  (UUID(), 'Travel', 'plane', 'green'),
+  (UUID(), 'Other', 'ellipsis-h', 'gray'); 
