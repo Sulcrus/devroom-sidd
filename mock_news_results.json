@@ -1,0 +1,71 @@
+{
+  "scraping_timestamp": "2024-01-15 14:30:25",
+  "total_articles": 5,
+  "articles": [
+    {
+      "title": "🏦 Nepal's Banking Gets AI Makeover!",
+      "summary": "Siddhartha Bank launches revolutionary digital services with biometric auth and AI insights.",
+      "category": "Tech",
+      "hashtags": [
+        "#NepalTech",
+        "#DigitalBanking",
+        "#AI",
+        "#Innovation",
+        "#SiddharthaBank"
+      ],
+      "url": "https://example.com/siddhartha-bank-digital"
+    },
+    {
+      "title": "🌆 Kathmandu Goes Smart: $2B Project Approved!",
+      "summary": "Government approves massive $2B smart city initiative for Kathmandu's digital transformation.",
+      "category": "News",
+      "hashtags": [
+        "#SmartCity",
+        "#Kathmandu",
+        "#Technology",
+        "#Infrastructure",
+        "#Nepal"
+      ],
+      "url": "https://example.com/kathmandu-smart-city"
+    },
+    {
+      "title": "⚡ EV Revolution: 300% Sales Boom in Nepal!",
+      "summary": "Nepal's electric vehicle market explodes with 15,000+ EVs sold this year alone.",
+      "category": "Tech",
+      "hashtags": [
+        "#ElectricVehicles",
+        "#GreenNepal",
+        "#Sustainability",
+        "#EVs",
+        "#CleanEnergy"
+      ],
+      "url": "https://example.com/ev-sales-nepal"
+    },
+    {
+      "title": "🏔️ Rara Lake Joins UNESCO World Heritage!",
+      "summary": "Beautiful Rara Lake area receives prestigious UNESCO World Heritage status.",
+      "category": "News",
+      "hashtags": [
+        "#UNESCO",
+        "#RaraLake",
+        "#WorldHeritage",
+        "#Nepal",
+        "#Tourism"
+      ],
+      "url": "https://example.com/rara-unesco"
+    },
+    {
+      "title": "🦄 Nepal's First Unicorn: eSewa Hits $1B!",
+      "summary": "eSewa makes history as Nepal's first billion-dollar startup after major funding round.",
+      "category": "Tech",
+      "hashtags": [
+        "#Unicorn",
+        "#eSewa",
+        "#Fintech",
+        "#Startup",
+        "#NepalTech"
+      ],
+      "url": "https://example.com/esewa-unicorn"
+    }
+  ]
+}
